@@ -1,0 +1,8 @@
+[submodule "libfzn"]
+	path = libfzn
+	url = https://95A31@bitbucket.org/constraint-programming/libfzn.git
+	branch = main
+[submodule "libminicpp"]
+	path = libminicpp
+	url = https://95A31@bitbucket.org/constraint-programming/libminicpp.git
+	branch = main
