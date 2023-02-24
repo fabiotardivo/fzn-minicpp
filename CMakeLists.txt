@@ -46,6 +46,7 @@ set(GLB_CONSTR_SRC
 	global_constraints/cumulative.cpp
 )
 set(GPU_CONSTR_SRC
+	gpu_constriants/cumulative.cu
 )
 set (FZN_MINICPP_SRC
 	fzn_cli_helper.cpp
