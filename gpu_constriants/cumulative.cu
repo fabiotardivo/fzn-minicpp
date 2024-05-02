@@ -35,6 +35,7 @@ CumulativeGPU::CumulativeGPU(std::vector<var<int>::Ptr> & s, std::vector<int> co
 
 void CumulativeGPU::post()
 {
+
     using namespace std;
     using namespace Fca;
 

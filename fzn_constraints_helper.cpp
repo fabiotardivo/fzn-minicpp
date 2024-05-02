@@ -10,6 +10,8 @@
 #include "fzn_constraints/int_lin.hpp"
 #include "fzn_constraints/int_misc.hpp"
 #include "global_constraints/cumulative.hpp"
+#include "global_constraints/table.hpp"
+#include "global_constraints/stable_matching.hpp"
 #include "gpu_constriants/cumulative.cuh"
 
 using backward_implication_t = std::function<void()>;
@@ -865,6 +867,51 @@ void FznConstraintHelper::addGlobalConstraintsBuilders()
             auto const tEnd = tBegin + tuple_size;
             _t.emplace_back(tBegin, tEnd);
         }
-        return new (solver) TableCT(x, _t);
+
+        bool const uniud = count_if(anns.begin(), anns.end(), [](Fzn::annotation_t const & ann) -> bool {return ann.first == "uniud";});
+        if (uniud)
+        {
+            return new (solver) Table(x, _t);
+        }
+        else
+        {
+            return new (solver) TableCT(x, _t);
+        }
+    });
+
+    constriants_builders.emplace("minicpp_stable_matching", [&](vector<Fzn::constraint_arg_t> const & args, vector<Fzn::annotation_t> const & anns) -> Constraint::Ptr {
+        auto m = fvh.getArrayIntVars(args.at(0));
+        auto w = fvh.getArrayIntVars(args.at(1));
+        assert(m.size() == w.size());
+
+        auto const n = m.size();
+        auto pmFlat = fvh.getArrayInt(args.at(2));
+        auto pwFlat = fvh.getArrayInt(args.at(3));
+
+        vector<vector<int>> pm;
+        for (auto mIdx = 0; mIdx < n; mIdx += 1)
+        {
+            auto const tBegin = pmFlat.begin() + (mIdx * n);
+            auto const tEnd = tBegin + n;
+            pm.emplace_back(tBegin, tEnd);
+        }
+
+        vector<vector<int>> pw;
+        for (auto wIdx = 0; wIdx < n; wIdx += 1)
+        {
+            auto const tBegin = pwFlat.begin() + (wIdx * n);
+            auto const tEnd = tBegin + n;
+            pw.emplace_back(tBegin, tEnd);
+        }
+
+        bool const uniud = count_if(anns.begin(), anns.end(), [](Fzn::annotation_t const & ann) -> bool {return ann.first == "uniud";});
+        if (uniud)
+        {
+            return new (solver) StableMatching(m, w, pm, pw);
+        }
+        else
+        {
+            throw std::runtime_error("Missing search annotation on stable_matching constraint: \"::uniud\"");
+        }
     });
 }
