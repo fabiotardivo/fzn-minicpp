@@ -11,6 +11,7 @@
 #include "fzn_constraints/int_misc.hpp"
 #include "global_constraints/cumulative.hpp"
 #include "global_constraints/table.hpp"
+#include "global_constraints/smart_table.hpp"
 #include "global_constraints/stable_matching.hpp"
 #include "gpu_constriants/cumulative.cuh"
 
@@ -877,6 +878,31 @@ void FznConstraintHelper::addGlobalConstraintsBuilders()
         {
             return new (solver) TableCT(x, _t);
         }
+    });
+
+     constriants_builders.emplace("minicpp_smart_table_int", [&](vector<Fzn::constraint_arg_t> const & args, vector<Fzn::annotation_t> const & anns) -> Constraint::Ptr {
+        auto x = fvh.getArrayIntVars(args.at(0));
+        auto t = fvh.getArrayInt(args.at(1));
+        auto sto = fvh.getArrayInt(args.at(2));
+        assert(t.size() % x.size() == 0);
+        auto const tuple_size = x.size();
+        auto const tuple_count = t.size() / tuple_size;
+        vector<vector<int>> _t;
+        for (auto i = 0; i < tuple_count; i += 1)
+        {
+            auto const tBegin = t.begin() + (i * tuple_size);
+            auto const tEnd = tBegin + tuple_size;
+            _t.emplace_back(tBegin, tEnd);
+        }
+         vector<vector<int>> _sto;
+         for (auto i = 0; i < tuple_count; i += 1)
+         {
+             auto const tBegin = sto.begin() + (i * tuple_size);
+             auto const tEnd = tBegin + tuple_size;
+             _sto.emplace_back(tBegin, tEnd);
+         }
+
+         return new (solver) SmartTable(x, _t, _sto);
     });
 
     constriants_builders.emplace("minicpp_stable_matching", [&](vector<Fzn::constraint_arg_t> const & args, vector<Fzn::annotation_t> const & anns) -> Constraint::Ptr {

@@ -45,6 +45,7 @@ set(FZN_CONSTR_SRC
 set(GLB_CONSTR_SRC
 	global_constraints/cumulative.cpp
 	global_constraints/table.cpp
+	global_constraints/smart_table.cpp
 	global_constraints/stable_matching.cpp
 )
 set(GPU_CONSTR_SRC
