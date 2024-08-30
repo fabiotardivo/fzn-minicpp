@@ -11,7 +11,7 @@ find_package(CUDAToolkit REQUIRED)
 set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})
 set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-set(CMAKE_CUDA_ARCHITECTURES "60;70;80")
+set(CMAKE_CUDA_ARCHITECTURES "80")
 set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 string(APPEND CMAKE_CUDA_FLAGS_DEBUG " -g -G")
 string(APPEND CMAKE_CUDA_FLAGS_RELWITHDEBINFO " -lineinfo")
@@ -48,6 +48,7 @@ set(GLB_CONSTR_SRC
 )
 set(GPU_CONSTR_SRC
 	gpu_constriants/cumulative.cu
+	gpu_constriants/bin_packing.cu
 )
 set (FZN_MINICPP_SRC
 	fzn_cli_helper.cpp

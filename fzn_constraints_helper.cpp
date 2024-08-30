@@ -12,6 +12,7 @@
 #include "global_constraints/cumulative.hpp"
 #include "global_constraints/bin_packing.hpp"
 #include "gpu_constriants/cumulative.cuh"
+#include "gpu_constriants/bin_packing.cuh"
 
 using backward_implication_t = std::function<void()>;
 
@@ -873,6 +874,15 @@ void FznConstraintHelper::addGlobalConstraintsBuilders()
         auto load = fvh.getArrayIntVars(args.at(0));
         auto bin = fvh.getArrayIntVars(args.at(1));
         auto w = fvh.getArrayInt(args.at(2));
-        return new (solver) BinPackingLoad(load,bin,w);
+
+        bool const gpu = count_if(anns.begin(), anns.end(), [](Fzn::annotation_t const & ann) -> bool {return ann.first == "gpu";});
+        if (gpu)
+        {
+            return new (solver) BinPackingLoadGPU(load,bin,w);
+        }
+        else
+        {
+            return new (solver) BinPackingLoad(load,bin,w);
+        }
     });
 }
