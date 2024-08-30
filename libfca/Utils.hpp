@@ -36,5 +36,15 @@ namespace Fca::Utils
             static_assert(std::is_arithmetic_v<T>);
             return static_cast<double>(a) / static_cast<double>(b);
         }
+
+        template<typename T>
+        __host__ __device__ inline
+        T ceilDivPosInt(T a, T b)
+        {
+            static_assert(std::is_integral_v<T>);
+            //assert(a >= 0);
+            //assert(b > 0);
+            return (a + b - 1) / b;
+        }
     }
 }
