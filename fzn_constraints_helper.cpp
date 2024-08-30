@@ -10,6 +10,7 @@
 #include "fzn_constraints/int_lin.hpp"
 #include "fzn_constraints/int_misc.hpp"
 #include "global_constraints/cumulative.hpp"
+#include "global_constraints/bin_packing.hpp"
 #include "gpu_constriants/cumulative.cuh"
 
 using backward_implication_t = std::function<void()>;
@@ -866,5 +867,12 @@ void FznConstraintHelper::addGlobalConstraintsBuilders()
             _t.emplace_back(tBegin, tEnd);
         }
         return new (solver) TableCT(x, _t);
+    });
+
+    constriants_builders.emplace("minicpp_bin_packing_load", [&] (vector<Fzn::constraint_arg_t> const & args, vector<Fzn::annotation_t> const & anns) -> Constraint::Ptr {
+        auto load = fvh.getArrayIntVars(args.at(0));
+        auto bin = fvh.getArrayIntVars(args.at(1));
+        auto w = fvh.getArrayInt(args.at(2));
+        return new (solver) BinPackingLoad(load,bin,w);
     });
 }

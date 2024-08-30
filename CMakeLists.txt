@@ -44,6 +44,7 @@ set(FZN_CONSTR_SRC
 )
 set(GLB_CONSTR_SRC
 	global_constraints/cumulative.cpp
+	global_constraints/bin_packing.cpp
 )
 set(GPU_CONSTR_SRC
 	gpu_constriants/cumulative.cu
