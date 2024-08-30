@@ -26,6 +26,7 @@ set(FZN_CONSTR_SRC
 )
 set(GLB_CONSTR_SRC
 	global_constraints/cumulative.cpp
+	global_constraints/bin_packing.cpp
 )
 set (FZN_MINICPP_SRC
 	fzn_cli_helper.cpp
