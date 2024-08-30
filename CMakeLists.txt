@@ -64,6 +64,7 @@ set(GLB_CONSTR_SRC
 )
 set(GPU_CONSTR_SRC
     gpu_constraints/cumulative.cu
+    gpu_constraints/bin_packing.cu
 )
 set (FZN_MINICPP_SRC
 	fzn_cli_helper.cpp
