@@ -1,5 +1,5 @@
 #include <libfca/Array.hpp>
-#include <libfca/Utils.hpp>
+#include <libfca/Timer.hpp>
 #include <libgpu/Utils.cuh>
 #include "gpu_constriants/cumulative.cuh"
 
@@ -55,8 +55,11 @@ void CumulativeGPU::propagate()
 
     // Propagation
     //propagateBase();
+
+    Timer::begin("GPU Propagation");
     cudaGraphLaunch(propagate_low_latency, cu_stream);
     cudaStreamSynchronize(cu_stream);
+    Timer::end("GPU Propagation");
 
     // Filtering
     if (*isConsistent_h)

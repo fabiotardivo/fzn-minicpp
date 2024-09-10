@@ -94,6 +94,8 @@ int main(int argc, char * argv[])
             FznStatisticsHelper::printStatistics(stats, solver, fzn_model, search, cout);
         }
 
+        Timer::summary();
+
         exit(EXIT_SUCCESS);
     }
     else

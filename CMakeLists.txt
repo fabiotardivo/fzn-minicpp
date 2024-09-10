@@ -60,6 +60,10 @@ set (FZN_MINICPP_SRC
 	main.cpp
 )
 
+set(MISC_SRC
+	libfca/Timer.cpp
+)
+
 # Executable
-add_executable(fzn-minicpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC} ${GPU_CONSTR_SRC})
+add_executable(fzn-minicpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC} ${GPU_CONSTR_SRC} ${MISC_SRC})
 target_link_libraries(fzn-minicpp libfzn libminicpp)
