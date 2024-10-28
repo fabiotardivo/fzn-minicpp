@@ -11,6 +11,8 @@
 #include "fzn_constraints/int_misc.hpp"
 #include "global_constraints/cumulative.hpp"
 #include "global_constraints/bin_packing.hpp"
+#include "global_constraints/extern.hpp"
+
 
 using backward_implication_t = std::function<void()>;
 
@@ -864,5 +866,10 @@ void FznConstraintHelper::addGlobalConstraintsBuilders()
         auto bin = fvh.getArrayIntVars(args.at(1));
         auto w = fvh.getArrayInt(args.at(2));
         return new (solver) BinPackingLoad(load,bin,w);
+    });
+
+    constriants_builders.emplace("minicpp_extern", [&] (vector<Fzn::constraint_arg_t> const & args, vector<Fzn::annotation_t> const & anns) -> Constraint::Ptr {
+        auto x = fvh.getArrayIntVars(args.at(0));
+        return new (solver) Extern(x);
     });
 }
