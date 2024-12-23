@@ -870,6 +870,7 @@ void FznConstraintHelper::addGlobalConstraintsBuilders()
 
     constriants_builders.emplace("minicpp_extern", [&] (vector<Fzn::constraint_arg_t> const & args, vector<Fzn::annotation_t> const & anns) -> Constraint::Ptr {
         auto x = fvh.getArrayIntVars(args.at(0));
-        return new (solver) Extern(x);
+        auto y = fvh.getArrayInt(args.at(1));
+        return new (solver) Extern(x, y);
     });
 }

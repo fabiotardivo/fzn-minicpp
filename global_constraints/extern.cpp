@@ -1,9 +1,8 @@
 #include "extern.hpp"
 
-Extern::Extern(std::vector<var<int>::Ptr> & x):
-        Constraint(x[0]->getSolver()), _x(x)
+Extern::Extern(std::vector<var<int>::Ptr> & x,  std::vector<int> & y):
+        Constraint(x[0]->getSolver()), _x(x), _y(y)
 {
-
     setPriority(CLOW);
     // Examples:
     //Initialization backtrackable int vector: [3,3,3,3,3,3,3,3,3,3]
@@ -28,4 +27,6 @@ void Extern::propagate()
 {
     // Implement the propagation logic
     printf("%%%%%% Extern propagation called.\n");
+    printf("%%%%%% Variables %lu\n", _x.size());
+    printf("%%%%%% Parameters %lu\n", _y.size());
 }
