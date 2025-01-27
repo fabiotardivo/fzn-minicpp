@@ -70,7 +70,7 @@ void FznVariablesHelper::makeIntVariables(std::unordered_map<std::string, Fzn::V
         }
         else if (std::holds_alternative<int_set_t>(fzn_int_var.domain))
         {
-            auto const & int_set = any_cast<int_set_t>(fzn_int_var.domain);
+            auto const & int_set = std::get<int_set_t>(fzn_int_var.domain);
             int_var = Factory::makeIntVar(solver, int_set);
         }
         else
