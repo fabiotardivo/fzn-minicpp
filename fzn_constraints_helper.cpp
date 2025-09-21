@@ -1,5 +1,5 @@
-#include <libminicpp/constraint.hpp>
-#include <libminicpp/table.hpp>
+#include <constraint.hpp>
+#include <table.hpp>
 #include "fzn_constraints_helper.h"
 #include "fzn_constraints/bool_array.hpp"
 #include "fzn_constraints/bool_bin.hpp"

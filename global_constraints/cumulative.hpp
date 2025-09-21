@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libminicpp/varitf.hpp>
+#include <varitf.hpp>
 
 #define MAX_INTERVALS_PER_ACTIVITY_PAIR 12
 

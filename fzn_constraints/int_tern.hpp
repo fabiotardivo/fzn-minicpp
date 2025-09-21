@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libminicpp/intvar.hpp>
+#include <intvar.hpp>
 
 void calMulBounds(int aMin, int aMax, int bMin, int bMax, int & min, int & max);
 void calDivBounds(int aMin, int aMax, int bMin, int bMax, int & min, int & max);

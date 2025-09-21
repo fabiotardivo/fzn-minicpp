@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cxxopts/cxxopts.hpp"
+#include <cxxopts.hpp>
 
 class FznCliHelper
 {

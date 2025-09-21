@@ -3,9 +3,9 @@
 #include <string>
 #include <unordered_map>
 
-#include <libfzn/Model.h>
-#include <libfzn/Printer.h>
-#include <libminicpp/intvar.hpp>
+#include <Model.h>
+#include <Printer.h>
+#include <intvar.hpp>
 
 class FznVariablesHelper
 {

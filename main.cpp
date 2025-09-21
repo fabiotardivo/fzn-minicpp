@@ -1,7 +1,7 @@
-#include <libfzn/Parser.h>
-#include <libfzn/Printer.h>
-#include <libminicpp/solver.hpp>
-#include <libminicpp/search.hpp>
+#include <Parser.h>
+#include <Printer.h>
+#include <solver.hpp>
+#include <search.hpp>
 #include <libfca/Timer.hpp>
 
 #include "fzn_cli_helper.h"

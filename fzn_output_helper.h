@@ -1,10 +1,11 @@
 #pragma once
 
+#include <cstdint>
 #include <sstream>
-#include <cxxopts/cxxopts.hpp>
-#include <libfzn/Printer.h>
-#include <libfzn/Model.h>
-#include <libminicpp/search.hpp>
+#include <cxxopts.hpp>
+#include <Printer.h>
+#include <Model.h>
+#include <search.hpp>
 
 class FznOutputHelper
 {

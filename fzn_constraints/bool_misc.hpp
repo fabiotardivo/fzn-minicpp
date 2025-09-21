@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libminicpp/intvar.hpp>
+#include <intvar.hpp>
 
 class bool_clause : public Constraint
 {

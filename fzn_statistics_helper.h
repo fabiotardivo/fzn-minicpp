@@ -1,7 +1,7 @@
 #pragma once
 
-#include <libminicpp/search.hpp>
-#include <libfzn/Model.h>
+#include <search.hpp>
+#include <Model.h>
 #include "fzn_variables_helper.h"
 
 class FznStatisticsHelper

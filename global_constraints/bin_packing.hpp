@@ -1,7 +1,7 @@
 #pragma once
 
 #include <functional>
-#include "libminicpp/constraint.hpp"
+#include "constraint.hpp"
 #include "libfca/Vector.hpp"
 #include "libfca/Utils.hpp"
 

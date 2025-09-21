@@ -1,7 +1,7 @@
 #pragma once
 
 #include <set>
-#include <libminicpp/intvar.hpp>
+#include <intvar.hpp>
 
 class set_in : public Constraint
 {

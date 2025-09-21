@@ -1,17 +1,33 @@
-cmake_minimum_required(VERSION 3.22)
-project(fzn-minicpp)
+cmake_minimum_required(VERSION 3.28)
+project(fzn-minicpp CXX)
 
 # C++
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-enable_language(CXX)
 
 # Includes
 include_directories(.)
 
-# External projects
-add_subdirectory(libfzn)
-add_subdirectory(libminicpp)
+# Dependency
+include(FetchContent)
+FetchContent_Declare(
+        cxxopts
+        GIT_REPOSITORY https://github.com/jarro2783/cxxopts.git
+        GIT_TAG        master
+)
+FetchContent_Declare(
+        libfzn
+        GIT_REPOSITORY https://github.com/fabiotardivo/libfzn.git
+        GIT_TAG        main
+)
+FetchContent_Declare(
+        libminicpp
+        GIT_REPOSITORY https://github.com/fabiotardivo/libminicpp.git
+        GIT_TAG        main
+)
+FetchContent_MakeAvailable(cxxopts)
+FetchContent_MakeAvailable(libfzn)
+FetchContent_MakeAvailable(libminicpp)
 
 # Sources
 set(FZN_CONSTR_SRC
@@ -40,4 +56,4 @@ set (FZN_MINICPP_SRC
 
 # Executable
 add_executable(fzn-minicpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC})
-target_link_libraries(fzn-minicpp libfzn libminicpp)
+target_link_libraries(fzn-minicpp cxxopts libfzn libminicpp )

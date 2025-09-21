@@ -1,8 +1,8 @@
 #pragma once
 
 #include <functional>
-#include <cxxopts/cxxopts.hpp>
-#include <libminicpp/search.hpp>
+#include <cxxopts.hpp>
+#include <search.hpp>
 #include "fzn_variables_helper.h"
 
 class FznSearchHelper

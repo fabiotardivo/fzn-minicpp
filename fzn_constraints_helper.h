@@ -3,7 +3,7 @@
 #include <variant>
 #include <functional>
 
-#include <libfzn/Types.h>
+#include <Types.h>
 #include "fzn_variables_helper.h"
 
 class FznConstraintHelper
