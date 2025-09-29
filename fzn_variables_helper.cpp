@@ -6,7 +6,7 @@ FznVariablesHelper::FznVariablesHelper(CPSolver::Ptr solver, Fzn::Model const & 
         fzn_model(fzn_model)
 {}
 
-void FznVariablesHelper::makeBoolVariables(std::unordered_map<std::string, Fzn::Var> const & fzn_bool_vars, Fzn::Printer & fzn_printer)
+void FznVariablesHelper::makeBoolVariables(std::unordered_map<std::string, Fzn::Var> const & fzn_bool_vars, Fzn::Printer * fzn_printer)
 {
     using namespace std;
     using namespace Fzn;
@@ -20,11 +20,14 @@ void FznVariablesHelper::makeBoolVariables(std::unordered_map<std::string, Fzn::
         var<bool>::Ptr bool_var = Factory::makeBoolVar(solver);
         bool_vars.emplace(identifier, bool_var);
 
-        for (auto const & annotation : fzn_bool_var.annotations)
+        if (fzn_printer != nullptr)
         {
-            if (annotation.first == "output_var")
+            for (auto const & annotation : fzn_bool_var.annotations)
             {
-                fzn_printer.add_output<bool>(identifier, [=]() -> int {return bool_var->min();});
+                if (annotation.first == "output_var")
+                {
+                    fzn_printer->add_output<bool>(identifier, [=]() -> int {return bool_var->min();});
+                }
             }
         }
     }
@@ -34,24 +37,27 @@ void FznVariablesHelper::makeBoolVariables(std::unordered_map<std::string, Fzn::
     {
         auto const & identifier = entry.first;
         auto const & array_bool_var = entry.second;
-        for (auto const & annotation : array_bool_var.annotations)
+        if (fzn_printer != nullptr)
         {
-            if (annotation.first == "output_array")
+            for (auto const & annotation : array_bool_var.annotations)
             {
-                auto indices = get<vector<Fzn::int_range_t>>(annotation.second.at(0));
-                vector<function<bool()>> callbacks;
-                for (auto const & bool_var_id : array_bool_var.variables)
+                if (annotation.first == "output_array")
                 {
-                    auto & bool_var = bool_vars.at(string(bool_var_id));
-                    callbacks.emplace_back([=](){return bool_var->min();});
+                    auto indices = get<vector<Fzn::int_range_t>>(annotation.second.at(0));
+                    vector<function<bool()>> callbacks;
+                    for (auto const & bool_var_id : array_bool_var.variables)
+                    {
+                        auto & bool_var = bool_vars.at(string(bool_var_id));
+                        callbacks.emplace_back([=](){return bool_var->min();});
+                    }
+                    fzn_printer->add_output<bool>(identifier, indices, callbacks);
                 }
-                fzn_printer.add_output<bool>(identifier, indices, callbacks);
             }
         }
     }
 }
 
-void FznVariablesHelper::makeIntVariables(std::unordered_map<std::string, Fzn::Var> const & fzn_int_vars, Fzn::Printer & fzn_printer)
+void FznVariablesHelper::makeIntVariables(std::unordered_map<std::string, Fzn::Var> const & fzn_int_vars, Fzn::Printer * fzn_printer)
 {
     using namespace std;
     using namespace Fzn;
@@ -70,7 +76,7 @@ void FznVariablesHelper::makeIntVariables(std::unordered_map<std::string, Fzn::V
         }
         else if (std::holds_alternative<int_set_t>(fzn_int_var.domain))
         {
-            auto const & int_set = std::get<int_set_t>(fzn_int_var.domain);
+            auto const & int_set = any_cast<int_set_t>(fzn_int_var.domain);
             int_var = Factory::makeIntVar(solver, int_set);
         }
         else
@@ -79,11 +85,14 @@ void FznVariablesHelper::makeIntVariables(std::unordered_map<std::string, Fzn::V
         }
         int_vars.emplace(identifier, int_var);
 
-        for (auto const & annotation : fzn_int_var.annotations)
+        if (fzn_printer != nullptr)
         {
-            if (annotation.first == "output_var")
+            for (auto const & annotation : fzn_int_var.annotations)
             {
-                fzn_printer.add_output<int>(identifier, [=]() -> int {return int_var->min();});
+                if (annotation.first == "output_var")
+                {
+                    fzn_printer->add_output<int>(identifier, [=]() -> int {return int_var->min();});
+                }
             }
         }
     }
@@ -93,18 +102,22 @@ void FznVariablesHelper::makeIntVariables(std::unordered_map<std::string, Fzn::V
     {
         auto const & identifier = entry.first;
         auto const & array_int_var = entry.second;
-        for (auto const & annotation : array_int_var.annotations)
+
+        if (fzn_printer != nullptr)
         {
-            if (annotation.first == "output_array")
+            for (auto const & annotation : array_int_var.annotations)
             {
-                auto indices = get<vector<Fzn::int_range_t>>(annotation.second.at(0));
-                vector<function<int()>> callbacks;
-                for (auto const & int_var_id : array_int_var.variables)
+                if (annotation.first == "output_array")
                 {
-                    auto & int_var = int_vars.at(string(int_var_id));
-                    callbacks.emplace_back([=](){return int_var->min();});
+                    auto indices = get<vector<Fzn::int_range_t>>(annotation.second.at(0));
+                    vector<function<int()>> callbacks;
+                    for (auto const & int_var_id : array_int_var.variables)
+                    {
+                        auto & int_var = int_vars.at(string(int_var_id));
+                        callbacks.emplace_back([=](){return int_var->min();});
+                    }
+                    fzn_printer->add_output<int>(identifier, indices, callbacks);
                 }
-                fzn_printer.add_output<int>(identifier, indices, callbacks);
             }
         }
     }

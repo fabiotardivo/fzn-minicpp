@@ -5,6 +5,17 @@ project(fzn-minicpp CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Machine Learning
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+find_package(Python3 COMPONENTS Development REQUIRED)
+execute_process(COMMAND "${Python3_EXECUTABLE}" -m pybind11 --cmakedir
+		OUTPUT_VARIABLE pybind11_DIR
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+set(PYBIND11_FINDPYTHON ON)
+find_package(pybind11 REQUIRED)
+
+
 # Includes
 include_directories(.)
 
@@ -51,9 +62,11 @@ set (FZN_MINICPP_SRC
 	fzn_search_helper.cpp
 	fzn_statistics_helper.cpp
 	fzn_variables_helper.cpp
-	main.cpp
 )
 
-# Executable
-add_executable(fzn-minicpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC})
-target_link_libraries(fzn-minicpp cxxopts libfzn libminicpp )
+# Executables
+add_executable(fzn-minicpp-ml  main_ml.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC})
+target_link_libraries(fzn-minicpp-ml cxxopts libfzn libminicpp pybind11::embed)
+
+add_executable(fzn-minicpp-ml-sampler main_ml_sampler.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC})
+target_link_libraries(fzn-minicpp-ml-sampler cxxopts libfzn libminicpp)

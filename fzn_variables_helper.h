@@ -17,8 +17,8 @@ class FznVariablesHelper
 
     public:
         FznVariablesHelper(CPSolver::Ptr solver, Fzn::Model const & fzn_model);
-        void makeBoolVariables(std::unordered_map<std::string, Fzn::Var> const & fzn_bool_vars, Fzn::Printer & fzn_printer);
-        void makeIntVariables(std::unordered_map<std::string, Fzn::Var> const & fzn_int_vars, Fzn::Printer & fzn_printer);
+        void makeBoolVariables(std::unordered_map<std::string, Fzn::Var> const & fzn_bool_vars, Fzn::Printer * fzn_printer = nullptr);
+        void makeIntVariables(std::unordered_map<std::string, Fzn::Var> const & fzn_int_vars, Fzn::Printer * fzn_printer = nullptr);
         static bool getBool(Fzn::constraint_arg_t const & fzn_arg);
         static int getInt(Fzn::constraint_arg_t const & fzn_arg);
         var<bool>::Ptr getBoolVar(Fzn::constraint_arg_t const & fzn_arg);

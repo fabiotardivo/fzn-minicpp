@@ -1,8 +1,12 @@
 #pragma once
 
 #include <functional>
-#include <cxxopts.hpp>
-#include <search.hpp>
+
+#include "cxxopts.hpp"
+
+#include "Model.h"
+#include "search.hpp"
+
 #include "fzn_variables_helper.h"
 
 class FznSearchHelper
@@ -14,10 +18,15 @@ class FznSearchHelper
     public:
         FznSearchHelper(CPSolver::Ptr solver, FznVariablesHelper & fvh);
         std::function<Branches(void)> getSearchStrategy(Fzn::Model const & fzn_model);
+        std::function<Branches(void)> getSampleStrategy(Fzn::Model const & fzn_model);
+        std::vector<var<int>::Ptr> getIntDecisionalVars(Fzn::Model const & fzn_model);
+        std::vector<var<int>::Ptr> getIntDecisionalVars(Fzn::var_expr_t var_expr);
+        std::vector<var<bool>::Ptr> getBoolDecisionalVars(Fzn::var_expr_t vars_expr);
         static Limit makeSearchLimits(Fzn::Model const & fzn_model, cxxopts::ParseResult const & args);
 
     private:
         std::function<Branches(void)> makeBasicSearchStrategy(Fzn::basic_search_annotation_t const & basic_search_annotation);
+        std::function<Branches(void)> makeBasicSampleStrategy(Fzn::basic_search_annotation_t const & basic_search_annotation);
         template<typename Vars, typename Var>
         static std::function<Var(Vars const &)> makeVariableSelection(Fzn::pred_identifier_t const & variable_selection);
         template <typename Var>
@@ -48,10 +57,14 @@ std::function<Var(Vars const &)> FznSearchHelper::makeVariableSelection(Fzn::pre
     {
         return [](Vars const &  vars) -> Var { return largest<Vars,Var>(vars); };
     }
+    else if (variable_selection == "random")
+    {
+        return [](Vars const &  vars) -> Var { return random<Vars,Var>(vars); };
+    }
     else
     {
         stringstream msg;
-        msg << "Unsupported value selection : " << variable_selection;
+        msg << "Unsupported variable selection : " << variable_selection;
         throw runtime_error(msg.str());
     }
 }
@@ -72,6 +85,10 @@ std::function<Branches(CPSolver::Ptr, Var)> FznSearchHelper::makeValueSelection(
     else if (value_selection == "indomain_split")
     {
         return [](CPSolver::Ptr s, Var var) -> Branches { return indomain_split<Var>(s, var); };
+    }
+    else if (value_selection == "indomain_random")
+    {
+        return [](CPSolver::Ptr s, Var var) -> Branches { return indomain_random<Var>(s, var); };
     }
     else
     {
