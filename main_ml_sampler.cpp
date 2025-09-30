@@ -2,11 +2,8 @@
 
 #include <Parser.h>
 #include <solver.hpp>
-#include <search.hpp>
 
-#include "fzn_constraints_helper.h"
 #include "fzn_search_helper.h"
-#include "fzn_variables_helper.h"
 #include "ml_sampler.h"
 
 int main(int argc, char * argv[])

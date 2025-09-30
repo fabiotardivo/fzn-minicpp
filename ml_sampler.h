@@ -12,12 +12,12 @@
 namespace ML
 {
     template<typename Var>
-    double getValue(Var const & var)
+    float getValue(Var const & var)
     {
-        return var->isBound() ? static_cast<double>(var->min()) : static_cast<double>(NAN);
+        return var->isBound() ? static_cast<float>(var->min()) : NAN;
     };
 
-    void flushSamples(Fca::Matrix<double> const & buffer, int & nSamples, int sampleSize, std::mutex & outMutex)
+    void flushSamples(Fca::Matrix<float> const & buffer, int & nSamples, int sampleSize, std::mutex & outMutex)
     {
         std::lock_guard<std::mutex> lock(outMutex);
 
@@ -65,14 +65,14 @@ namespace ML
             auto const intDecVars = searchHelper.getIntDecisionalVars(fznModel);
             DFSearch search(solver, searchHelper.getSampleStrategy(fznModel));
             auto const nIntDecVars = intDecVars.size();
-            std::vector<double> lastValidPA(nIntDecVars, NAN);
-            std::vector<double> badPA(nIntDecVars, NAN);
+            std::vector<float> lastValidPA(nIntDecVars, NAN);
+            std::vector<float> badPA(nIntDecVars, NAN);
 
             // Collect partial assignments
             auto const sampleSize = nIntDecVars + 1;
             auto nSamples = 0;
-            auto const rawBuffer = new double[BufferSize * sampleSize];
-            Fca::Matrix<double> buffer(BufferSize, sampleSize, rawBuffer);
+            auto const rawBuffer = new float[BufferSize * sampleSize];
+            Fca::Matrix<float> buffer(BufferSize, sampleSize, rawBuffer);
             search.onBranch([&,intDecVars]()
             {
                 for (auto vIdx = 0; vIdx < nIntDecVars; vIdx += 1)
@@ -115,7 +115,7 @@ namespace ML
                     negativeSample[nIntDecVars] = 0;
                     if (nSamples == BufferSize)
                     {
-                        flushSamples(buffer,nSamples, sampleSize,outMutex);\
+                        flushSamples(buffer,nSamples, sampleSize,outMutex);
                         nSamples = 0;
                     }
                 }

@@ -35,8 +35,8 @@ int main(int argc, char * argv[])
         // Variables and Printer
         FznVariablesHelper fzn_vars_helper(solver, fzn_model);
         Fzn::Printer fzn_printer;
-        fzn_vars_helper.makeBoolVariables(fzn_model.bool_vars, fzn_printer);
-        fzn_vars_helper.makeIntVariables(fzn_model.int_vars, fzn_printer);
+        fzn_vars_helper.makeBoolVariables(fzn_model.bool_vars, &fzn_printer);
+        fzn_vars_helper.makeIntVariables(fzn_model.int_vars, &fzn_printer);
 
         // Constraints
         FznConstraintHelper fzn_constr_helper(solver, fzn_vars_helper);

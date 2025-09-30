@@ -2,11 +2,11 @@
 
 #include <functional>
 
-#include "cxxopts.hpp"
+#include <pybind11/embed.h>
+#include <cxxopts.hpp>
 
 #include "Model.h"
 #include "search.hpp"
-
 #include "fzn_variables_helper.h"
 
 class FznSearchHelper
@@ -18,6 +18,7 @@ class FznSearchHelper
     public:
         FznSearchHelper(CPSolver::Ptr solver, FznVariablesHelper & fvh);
         std::function<Branches(void)> getSearchStrategy(Fzn::Model const & fzn_model);
+        std::function<Branches(void)> getSearchStrategy(Fzn::Model const & fzn_model, pybind11::object const  & ml_eval_fun);
         std::function<Branches(void)> getSampleStrategy(Fzn::Model const & fzn_model);
         std::vector<var<int>::Ptr> getIntDecisionalVars(Fzn::Model const & fzn_model);
         std::vector<var<int>::Ptr> getIntDecisionalVars(Fzn::var_expr_t var_expr);
@@ -26,6 +27,7 @@ class FznSearchHelper
 
     private:
         std::function<Branches(void)> makeBasicSearchStrategy(Fzn::basic_search_annotation_t const & basic_search_annotation);
+        std::function<Branches(void)> makeBasicSearchStrategy(Fzn::basic_search_annotation_t const & basic_search_annotation, pybind11::object const  & ml_eval_fun);
         std::function<Branches(void)> makeBasicSampleStrategy(Fzn::basic_search_annotation_t const & basic_search_annotation);
         template<typename Vars, typename Var>
         static std::function<Var(Vars const &)> makeVariableSelection(Fzn::pred_identifier_t const & variable_selection);
