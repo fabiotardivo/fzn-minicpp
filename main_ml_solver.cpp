@@ -2,16 +2,12 @@
 #include <Printer.h>
 #include <solver.hpp>
 #include <search.hpp>
-
-#include <pybind11/embed.h>
-
 #include "fzn_constraints_helper.h"
 #include "fzn_output_helper.h"
 #include "fzn_search_helper.h"
 #include "fzn_statistics_helper.h"
 #include "fzn_variables_helper.h"
-
-namespace py = pybind11;
+#include <libfca/Slice.hpp>
 
 int main(int argc, char * argv[])
 {
@@ -58,24 +54,26 @@ int main(int argc, char * argv[])
         FznConstraintHelper constrsHelper(solver, varsHelper);
         auto const isConsistent = constrsHelper.makeConstraints(fznModel);
 
-        // Load ML model
-        std::filesystem::path p(ml_model);
-        std::string directory = p.parent_path();
-        std::string module_name = p.stem();
-        py::object ml_eval_fun;
-        py::scoped_interpreter guard{};
-        try
+        // Load ML evaluator
+        std::function<float(std::vector<float> const &)> ml_eval_fun = [&](std::vector<float> const & pa) -> float
         {
-            py::module sys = py::module::import("sys");
-            sys.attr("path").attr("append")(directory);
-            py::module mypost = py::module::import(module_name.c_str());
-            ml_eval_fun = mypost.attr("eval");
-        }
-        catch (py::error_already_set const & e)
-        {
-            std::cerr << e.what() << std::endl;
-            return EXIT_FAILURE;
-        }
+            int vIdx = -1;
+            for (int i = 0; i < pa.size(); i += 1)
+            {
+                if (not std::isnan(pa[i]))
+                {
+                   vIdx = i;
+                   break;
+                }
+            }
+            assert(vIdx >=0);
+            float val = pa[vIdx];
+            float score = static_cast<float>(pa.size() * vIdx + val);
+            //Fca::Slice<float>::print(pa.data(), pa.data()+pa.size(), "%f");
+            //std::cout << score << std::endl;
+            //std::cout << score << std::endl;
+            return score;
+        };
 
         // Create Search
         FznSearchHelper searchHelper(solver, varsHelper);

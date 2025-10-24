@@ -1,12 +1,14 @@
 cmake_minimum_required(VERSION 3.28)
 project(fzn-minicpp CXX)
 
+# Build
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release")
+endif()
+
 # C++
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Machine Learning
-find_package(pybind11 CONFIG REQUIRED)
 
 # Includes
 include_directories(.)
@@ -28,6 +30,7 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/fabiotardivo/libminicpp.git
         GIT_TAG        main
 )
+
 FetchContent_MakeAvailable(cxxopts)
 FetchContent_MakeAvailable(libfzn)
 FetchContent_MakeAvailable(libminicpp)
@@ -58,10 +61,10 @@ set (FZN_MINICPP_SRC
 
 # Executables
 add_executable(fzn-minicpp main.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC})
-target_link_libraries(fzn-minicpp cxxopts libfzn libminicpp libminicpp pybind11::embed)
+target_link_libraries(fzn-minicpp cxxopts libfzn libminicpp)
 
 add_executable(fzn-minicpp-ml-solver main_ml_solver.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC})
-target_link_libraries(fzn-minicpp-ml-solver cxxopts libfzn libminicpp pybind11::embed)
+target_link_libraries(fzn-minicpp-ml-solver cxxopts libfzn libminicpp)
 
 add_executable(fzn-minicpp-ml-sampler main_ml_sampler.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC})
-target_link_libraries(fzn-minicpp-ml-sampler cxxopts libfzn libminicpp pybind11::embed)
+target_link_libraries(fzn-minicpp-ml-sampler cxxopts libfzn libminicpp)

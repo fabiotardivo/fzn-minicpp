@@ -33,8 +33,7 @@ namespace Fca
             __host__ __device__ Slice<T> & operator=(Slice<T> const & other) = delete;
             __host__ __device__ inline Slice<T> & operator=(Slice<T> && other);
             __host__ __device__ void print() const;
-        protected:
-            __host__ __device__ static void print(T const * begin, T const * end);
+            __host__ __device__ static void print(T const * begin, T const * end, char const * fmt = "%d");
     };
 
     template<typename T>
@@ -110,14 +109,14 @@ namespace Fca
 
     template<typename T>
     __host__ __device__
-    void Slice<T>::print(T const * begin, T const * end)
+    void Slice<T>::print(T const * begin, T const * end, char const * fmt)
     {
-        static_assert(std::is_integral<T>::value);
         T const * t = begin;
-        printf("%d", *t);
+        printf(fmt, *t);
         for(t += 1; t != end; t += 1)
         {
-            printf(",%d", *t);
+            printf(",");
+            printf(fmt, *t);
         }
         printf("\n");
     }

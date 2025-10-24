@@ -1,5 +1,3 @@
-#include <pybind11/stl.h>
-
 #include "fzn_search_helper.h"
 
 FznSearchHelper::FznSearchHelper(CPSolver::Ptr solver, FznVariablesHelper & fvh) :
@@ -56,7 +54,7 @@ std::function<Branches(void)> FznSearchHelper::getSearchStrategy(Fzn::Model cons
     return land(search_strategy);
 }
 
-std::function<Branches(void)> FznSearchHelper::getSearchStrategy(Fzn::Model const & fzn_model, pybind11::object const & ml_eval_fun)
+std::function<Branches(void)> FznSearchHelper::getSearchStrategy(Fzn::Model const & fzn_model, std::function<float(std::vector<float> const&)> ml_eval_fun)
 {
     using namespace std;
 
@@ -240,7 +238,7 @@ std::function<Branches(void)> FznSearchHelper::makeBasicSearchStrategy(Fzn::basi
     }
 }
 
-std::function<Branches(void)> FznSearchHelper::makeBasicSearchStrategy(Fzn::basic_search_annotation_t const & basic_search_annotation, pybind11::object const & ml_eval_fun)
+std::function<Branches(void)> FznSearchHelper::makeBasicSearchStrategy(Fzn::basic_search_annotation_t const & basic_search_annotation, std::function<float(std::vector<float> const&)> ml_eval_fun)
 {
     using namespace std;
 
@@ -283,7 +281,7 @@ std::function<Branches(void)> FznSearchHelper::makeBasicSearchStrategy(Fzn::basi
                         if (var->contains(val))
                         {
                             toEval[varIdx] = val;
-                            auto const score = ml_eval_fun(toEval).cast<float>();
+                            auto const score = ml_eval_fun(toEval);
                             if (score < bestScore)
                             {
                                 bestScore = score;
