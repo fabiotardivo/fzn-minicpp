@@ -30,10 +30,19 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/fabiotardivo/libminicpp.git
         GIT_TAG        main
 )
-
+set(ONNXRUNTIME_VERSION 1.23.1)
+set(ONNXRUNTIME_PLATFORM linux-x64)
+set(ONNXRUNTIME_URL
+        https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/onnxruntime-${ONNXRUNTIME_PLATFORM}-${ONNXRUNTIME_VERSION}.tgz
+)
+FetchContent_Declare(
+        onnxruntime
+        URL ${ONNXRUNTIME_URL}
+)
 FetchContent_MakeAvailable(cxxopts)
 FetchContent_MakeAvailable(libfzn)
 FetchContent_MakeAvailable(libminicpp)
+FetchContent_MakeAvailable(onnxruntime)
 
 # Sources
 set(FZN_CONSTR_SRC
@@ -63,8 +72,9 @@ set (FZN_MINICPP_SRC
 add_executable(fzn-minicpp main.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC})
 target_link_libraries(fzn-minicpp cxxopts libfzn libminicpp)
 
-add_executable(fzn-minicpp-ml-solver main_ml_solver.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC})
-target_link_libraries(fzn-minicpp-ml-solver cxxopts libfzn libminicpp)
+add_executable(fzn-minicpp-ml-solver main_ml_solver.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC} ${ML_SRC})
+target_include_directories(fzn-minicpp-ml-solver PRIVATE ${onnxruntime_SOURCE_DIR}/include)
+target_link_libraries(fzn-minicpp-ml-solver cxxopts libfzn libminicpp ${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so)
 
 add_executable(fzn-minicpp-ml-sampler main_ml_sampler.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC})
 target_link_libraries(fzn-minicpp-ml-sampler cxxopts libfzn libminicpp)
