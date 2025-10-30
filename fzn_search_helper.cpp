@@ -44,11 +44,11 @@ std::function<Branches(void)> FznSearchHelper::getSearchStrategy(Fzn::Model cons
     // Default search
     auto const & bool_var_sel = makeVariableSelection<vector<var<bool>::Ptr>, var<bool>::Ptr>("first_fail");
     auto const & bool_val_sel = makeValueSelection<var<bool>::Ptr>("indomain_min");
-    auto bool_search_strategy = [=](){return bool_val_sel(solver, bool_var_sel(fvh.getAllBoolVars()));};
+    auto bool_search_strategy = [=,this](){return bool_val_sel(solver, bool_var_sel(fvh.getAllBoolVars()));};
     search_strategy.emplace_back(std::move(bool_search_strategy));
     auto const & int_var_sel = makeVariableSelection<vector<var<int>::Ptr>, var<int>::Ptr>("first_fail");
     auto const & int_val_sel = makeValueSelection<var<int>::Ptr>("indomain_min");
-    auto int_search_strategy = [=]() {return int_val_sel(solver, int_var_sel(fvh.getAllIntVars()));};
+    auto int_search_strategy = [=,this]() {return int_val_sel(solver, int_var_sel(fvh.getAllIntVars()));};
     search_strategy.emplace_back(std::move(int_search_strategy));
 
     return land(search_strategy);
@@ -216,7 +216,7 @@ std::function<Branches(void)> FznSearchHelper::makeBasicSearchStrategy(Fzn::basi
         auto const & val_sel = makeValueSelection<int_var_t>(annotations.at(1).first);
 
         array_int_var_t array_int_var = getIntDecisionalVars(var_expr);
-        return [=](){return val_sel(solver, var_sel(array_int_var));};
+        return [=,this](){return val_sel(solver, var_sel(array_int_var));};
     }
     else if (pred_identifier == "bool_search")
     {
@@ -228,7 +228,7 @@ std::function<Branches(void)> FznSearchHelper::makeBasicSearchStrategy(Fzn::basi
 
         // Decision variables
         array_bool_var_t array_bool_var = getBoolDecisionalVars(var_expr);
-        return [=](){return val_sel(solver, var_sel(array_bool_var));};
+        return [=,this](){return val_sel(solver, var_sel(array_bool_var));};
     }
     else
     {
@@ -325,7 +325,7 @@ std::function<Branches(void)> FznSearchHelper::makeBasicSampleStrategy(Fzn::basi
 
         // Decision variables
         array_int_var_t array_int_var = getIntDecisionalVars(var_expr);
-        return [=](){return val_sel(solver, var_sel(array_int_var));};
+        return [=,this](){return val_sel(solver, var_sel(array_int_var));};
     }
     else
     {
