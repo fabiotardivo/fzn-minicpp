@@ -273,6 +273,7 @@ std::function<Branches(void)> FznSearchHelper::makeBasicSearchStrategy(Fzn::basi
                 auto const &var = array_int_var[varIdx];
                 if (not var->isBound())
                 {
+                    std::cout  << "Evaluating var[" << varIdx << "] with " << var->size() << " values..." << std::endl;
                     std::vector<float> toEval = pa;
                     auto const minVal = var->min();
                     auto const maxVal = var->max();
@@ -282,17 +283,19 @@ std::function<Branches(void)> FznSearchHelper::makeBasicSearchStrategy(Fzn::basi
                         {
                             toEval[varIdx] = val;
                             auto const score = ml_eval_fun(toEval);
+                            std::cout  << "var[" << varIdx << "] = " << val << " -> " << score << std::endl;
                             if (score < bestScore)
                             {
                                 bestScore = score;
                                 bestVal = val;
                                 bestVar = var;
+                                std::cout  << "New best: var[" << varIdx << "] = " << bestVal << std::endl;
                             }
-
                         }
                     }
                 }
             }
+
             return indomain_fixed(solver, bestVar, bestVal);
         };
     }

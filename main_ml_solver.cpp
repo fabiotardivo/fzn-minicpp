@@ -8,6 +8,8 @@
 #include "fzn_statistics_helper.h"
 #include "fzn_variables_helper.h"
 #include <libfca/Slice.hpp>
+#include <ml/OnnxHandler.h>
+#include <sstream>
 
 int main(int argc, char * argv[])
 {
@@ -55,23 +57,25 @@ int main(int argc, char * argv[])
         auto const isConsistent = constrsHelper.makeConstraints(fznModel);
 
         // Load ML evaluator
+        constexpr float max_val = 120.0; // maximum possible raw value in your domain
+        constexpr size_t pa_length = 120; // Number of variables in the problems and length of the pa
+        constexpr float scale_ratio = 1.0; // set >1.0 to reserve headroom (e.g. 5.0/4.0)
+        constexpr float out_of_scale_marker = -1; // value to use for missing/out-of-scale entries
+        constexpr DistanceType distance_type = DistanceType::CATEGORICAL; // distance computation method
+        constexpr bool use_bitmask = true; // whether to use bitmasking for missing values
+        OnnxHandler::create_instance(ml_model, max_val, pa_length, scale_ratio, out_of_scale_marker,distance_type, use_bitmask);
+        OnnxHandler const & onnx_handler = OnnxHandler::get_instance();
+
         std::function<float(std::vector<float> const &)> ml_eval_fun = [&](std::vector<float> const & pa) -> float
         {
-            int vIdx = -1;
-            for (int i = 0; i < pa.size(); i += 1)
+            std::stringstream ss;
+            for(int i = 0; i < pa.size(); i += 1)
             {
-                if (not std::isnan(pa[i]))
-                {
-                   vIdx = i;
-                   break;
-                }
+                ss << (i != 0 ? "," : "") << pa[i];
             }
-            assert(vIdx >=0);
-            float val = pa[vIdx];
-            float score = static_cast<float>(pa.size() * vIdx + val);
-            //Fca::Slice<float>::print(pa.data(), pa.data()+pa.size(), "%f");
-            //std::cout << score << std::endl;
-            //std::cout << score << std::endl;
+            auto score = onnx_handler.get_score(ss.str(), false);
+//            std::cout << score << " <- " << ss.str() << std::endl;
+//            std::cout.flush();
             return score;
         };
 
