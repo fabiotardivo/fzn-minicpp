@@ -46,5 +46,26 @@ namespace Fca::Utils
             //assert(b > 0);
             return (a + b - 1) / b;
         }
+
+        template<typename T>
+        __host__ __device__ inline
+        T roundDown(T const & a, T const & b)
+        {
+            static_assert(std::is_integral_v<T>);
+            return (a / b) * b;
+        }
+    }
+
+    namespace Bits
+    {
+        __host__ __device__ inline
+        unsigned int getLeftmostOneIndex64(unsigned long long int const & val)
+        {
+#ifdef CUDA_ARCH
+            return __clzll(val);
+#else
+            return  __builtin_clzll(val);
+#endif
+        }
     }
 }

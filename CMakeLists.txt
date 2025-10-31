@@ -65,6 +65,12 @@ set(GLB_CONSTR_SRC
 set(GPU_CONSTR_SRC
     gpu_constraints/cumulative.cu
     gpu_constraints/bin_packing.cu
+    gpu_constraints/all_different.cu
+    gpu_constraints/circuit.cu
+)
+set(GPU_SRC
+    libfca/BitMatrix.cu
+    libfca/SqrBitMatrix.cu
 )
 set (FZN_MINICPP_SRC
 	fzn_cli_helper.cpp
@@ -77,5 +83,5 @@ set (FZN_MINICPP_SRC
 )
 
 # Executable
-add_executable(fzn-minicpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC} ${GPU_CONSTR_SRC})
+add_executable(fzn-minicpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC} ${GPU_CONSTR_SRC} ${GPU_SRC})
 target_link_libraries(fzn-minicpp cxxopts libfzn libminicpp)

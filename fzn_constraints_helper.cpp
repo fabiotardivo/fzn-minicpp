@@ -13,6 +13,8 @@
 #include "global_constraints/bin_packing.hpp"
 #include "gpu_constraints/cumulative.cuh"
 #include "gpu_constraints/bin_packing.cuh"
+#include "gpu_constraints/all_different.cuh"
+#include "gpu_constraints/circuit.cuh"
 
 using backward_implication_t = std::function<void()>;
 
@@ -829,12 +831,28 @@ void FznConstraintHelper::addGlobalConstraintsBuilders()
 
     constriants_builders.emplace("minicpp_all_different", [&](vector<Fzn::constraint_arg_t> const & args, vector<Fzn::annotation_t> const & anns) -> Constraint::Ptr {
         auto const & x = fvh.getArrayIntVars(args.at(0));
-        return new (solver) AllDifferentAC(x);
+        bool const gpu = count_if(anns.begin(), anns.end(), [](Fzn::annotation_t const & ann) -> bool {return ann.first == "gpu";});
+        if (gpu)
+        {
+            return new (solver) AllDifferentGPU(x);
+        }
+        else
+        {
+            return new (solver) AllDifferentAC(x);
+        }
     });
 
     constriants_builders.emplace("minicpp_circuit", [&](vector<Fzn::constraint_arg_t> const & args, vector<Fzn::annotation_t> const & anns) -> Constraint::Ptr {
         auto const x = fvh.getArrayIntVars(args.at(0));
-        return new (solver) Circuit(x);
+        bool const gpu = count_if(anns.begin(), anns.end(), [](Fzn::annotation_t const & ann) -> bool {return ann.first == "gpu";});
+        if (gpu)
+        {
+            return new (solver) CircuitGPU(x);
+        }
+        else
+        {
+            return new (solver) Circuit(x);
+        }
     });
 
     constriants_builders.emplace("minicpp_cumulative", [&](vector<Fzn::constraint_arg_t> const & args, vector<Fzn::annotation_t> const & anns) -> Constraint::Ptr {
