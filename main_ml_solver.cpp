@@ -9,6 +9,7 @@
 #include "fzn_variables_helper.h"
 #include <libfca/Slice.hpp>
 #include <ml/OnnxHandler.h>
+#include <ml/utils.h>
 #include <sstream>
 
 int main(int argc, char * argv[])
@@ -17,7 +18,11 @@ int main(int argc, char * argv[])
 
     // Parse options
     std::string fzn;
-    std::string ml_model;
+    std::string model;
+    bool masked = true;
+    std::string distance = "categorical";
+    std::string rank = "worst";
+    int lookahead = 0;
     cxxopts::Options optsParser("fzn-minicpp-ml", "A C++ MiniZinc solver based on MiniCP.");
     optsParser.custom_help("[Options]");
     optsParser.positional_help("<FlatZinc>");
@@ -26,14 +31,18 @@ int main(int argc, char * argv[])
         ("n", "Stop search after <n> solutions", cxxopts::value<unsigned int>())
         ("s", "Print search statistics", cxxopts::value<bool>())
         ("t", "Stop search after <t> ms", cxxopts::value<unsigned int>())
-        ("m,model", "Machine learning model", cxxopts::value<std::string>(ml_model))
+        ("model", "Machine learning model in ONNX format", cxxopts::value<std::string>(model))
+        ("masked", "Ignore unassigned variables (Default = True)", cxxopts::value<bool>(masked))
+        ("distance", "Criteria to evaluate reconstruction: categorical, euclidian, levenshtein (Default = categorical).", cxxopts::value<std::string>(distance))
+        ("rank", "Criteria to rank scores: best, avg, worst (Default = best)", cxxopts::value<std::string>(rank))
+        ("lookahead", "Lookahead depth (Default = 0)", cxxopts::value<int>(lookahead))
         ("fzn", "FlatZinc", cxxopts::value<std::string>(fzn))
         ("h,help", "Print usage");
     optsParser.parse_positional({"fzn"});
 
     auto args = optsParser.parse(argc, argv);
 
-    if ((args.count("h") == 0) and (not fzn.empty()) and (not ml_model.empty()))
+    if ((args.count("h") == 0) and (not fzn.empty()) and (not model.empty()))
     {
         // Create Statistics
         SearchStatistics stats;
@@ -56,32 +65,38 @@ int main(int argc, char * argv[])
         FznConstraintHelper constrsHelper(solver, varsHelper);
         auto const isConsistent = constrsHelper.makeConstraints(fznModel);
 
-        // Load ML evaluator
-        constexpr float max_val = 120.0; // maximum possible raw value in your domain
-        constexpr size_t pa_length = 120; // Number of variables in the problems and length of the pa
-        constexpr float scale_ratio = 1.0; // set >1.0 to reserve headroom (e.g. 5.0/4.0)
-        constexpr float out_of_scale_marker = -1; // value to use for missing/out-of-scale entries
-        constexpr DistanceType distance_type = DistanceType::CATEGORICAL; // distance computation method
-        constexpr bool use_bitmask = true; // whether to use bitmasking for missing values
-        OnnxHandler::create_instance(ml_model, max_val, pa_length, scale_ratio, out_of_scale_marker,distance_type, use_bitmask);
-        OnnxHandler const & onnx_handler = OnnxHandler::get_instance();
-
-        std::function<float(std::vector<float> const &)> ml_eval_fun = [&](std::vector<float> const & pa) -> float
-        {
-            std::stringstream ss;
-            for(int i = 0; i < pa.size(); i += 1)
-            {
-                ss << (i != 0 ? "," : "") << pa[i];
-            }
-            auto score = onnx_handler.get_score(ss.str(), false);
-//            std::cout << score << " <- " << ss.str() << std::endl;
-//            std::cout.flush();
-            return score;
-        };
-
         // Create Search
         FznSearchHelper searchHelper(solver, varsHelper);
-        DFSearch search(solver, searchHelper.getSearchStrategy(fznModel, ml_eval_fun));
+
+        // Load ML evaluator
+        ML::IntVars const & intDecVars = searchHelper.getIntDecisionalVars(fznModel);
+        size_t pa_length = intDecVars.size(); // Number of variables in the problems and length of the pa
+        float max_val = 0; // maximum possible raw value in your domain
+        for(auto const & var : intDecVars)
+            max_val = std::max(max_val,static_cast<float>(var->max()));
+        float const scale_ratio = 1.0; // set >1.0 to reserve headroom (e.g. 5.0/4.0)
+        float const out_of_scale_marker = -1; // value to use for missing/out-of-scale entries
+        DistanceType const distance_type = distanceFromString(distance); // distance computation method
+        OnnxHandler::create_instance(model, max_val, pa_length, scale_ratio, out_of_scale_marker, distance_type, masked);
+        OnnxHandler const & onnx_handler = OnnxHandler::get_instance();
+        ML::RankType rankType = ML::rankFromString(rank);
+
+        ML::EvalFunctionType eval_fun = [&](int varIdx, ML::IntVars const & vars)
+        {
+            auto const & base_pa = ML::getPartialAssignment(vars);
+            auto const & base_pas = ML::getAllPartialAssignments(varIdx,vars, base_pa);
+            auto const & pas = ML::getLookahead(lookahead, vars, base_pas);
+            std::vector<float> scores;
+            for (auto const & pa : pas)
+            {
+                //ML::printPartialAssignment(pa);
+                scores.push_back(onnx_handler.get_score(pa));
+            }
+            auto result = ML::getScoreVal(varIdx,pas,scores,rankType);
+            return result;
+        };
+
+        DFSearch search(solver, searchHelper.getMLSearchStrategy(fznModel, eval_fun));
         FznStatisticsHelper::hookToSearch(stats, search);
 
         // Search limits

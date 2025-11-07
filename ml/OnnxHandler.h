@@ -11,6 +11,22 @@ enum DistanceType
     LEVENSHTEIN ///< All the values are aggregated and create a string, then Levenshtein is used. Depending on if we are using the bitmask or not the nan counts as a mismatch or is ignored.
 };
 
+inline
+DistanceType distanceFromString(std::string const & s)
+{
+    static const std::unordered_map<std::string, DistanceType> map
+    {
+            {"categorical", DistanceType::CATEGORICAL},
+            {"euclidian", DistanceType::EUCLIDEAN},
+            {"levenshtein", DistanceType::LEVENSHTEIN}
+    };
+
+    auto it = map.find(s);
+    if (it != map.end()) return it->second;
+    throw std::invalid_argument("Invalid distance: " + s);
+}
+
+
 // ---------------------------
 // Configurable parameters
 // ---------------------------
@@ -54,7 +70,7 @@ public:
      * \return The heuristic score for the partial assignment.
      */
     [[nodiscard]] float get_score(const std::string& pa, bool toClean = true) const;
-
+    [[nodiscard]] float get_score(std::vector<float> const & pa) const;
 
     void process_training_data(const std::string& inputFile, const std::string& outputFile, const std::string& domain_name) const;
 
@@ -70,6 +86,8 @@ public:
 
     /** \brief Deleted move assignment operator (singleton pattern). */
     OnnxHandler& operator=(OnnxHandler&&) = delete;
+
+
 
 
 private:
@@ -161,6 +179,7 @@ private:
      * \return A vector of floats representing the normalized Partial Assignment.
      */
     [[nodiscard]] std::pair<std::vector<float>, std::vector<float>> normalize_string_inference(const std::string& pa) const;
+    [[nodiscard]] std::pair<std::vector<float>, std::vector<float>> normalize_pa_inference(std::vector<float> const & pa) const;
 
     /**
      * \brief Preprocess a Partial Assignment string for training.

@@ -1,4 +1,5 @@
 #include "fzn_search_helper.h"
+#include "ml/utils.h"
 
 FznSearchHelper::FznSearchHelper(CPSolver::Ptr solver, FznVariablesHelper & fvh) :
     solver(solver), fvh(fvh)
@@ -52,30 +53,6 @@ std::function<Branches(void)> FznSearchHelper::getSearchStrategy(Fzn::Model cons
     search_strategy.emplace_back(std::move(int_search_strategy));
 
     return land(search_strategy);
-}
-
-std::function<Branches(void)> FznSearchHelper::getSearchStrategy(Fzn::Model const & fzn_model, std::function<float(std::vector<float> const&)> ml_eval_fun)
-{
-    using namespace std;
-
-    std::vector<std::function<Branches(void)>> search_strategy;
-    if (fzn_model.search_strategy.size() == 1)
-    {
-        auto const search_annotation = fzn_model.search_strategy[0];
-        if (holds_alternative<Fzn::basic_search_annotation_t>(search_annotation))
-        {
-            auto const & basic_search_annotation = get<Fzn::basic_search_annotation_t>(search_annotation);
-            return makeBasicSearchStrategy(basic_search_annotation, ml_eval_fun);
-        }
-        else
-        {
-            throw std::runtime_error("Unknown search annotation");
-        }
-    }
-    else
-    {
-        throw std::runtime_error("Unsupported search annotation");
-    }
 }
 
 std::function<Branches(void)> FznSearchHelper::getSampleStrategy(Fzn::Model const & fzn_model)
@@ -237,76 +214,6 @@ std::function<Branches(void)> FznSearchHelper::makeBasicSearchStrategy(Fzn::basi
         throw runtime_error(msg.str());
     }
 }
-
-std::function<Branches(void)> FznSearchHelper::makeBasicSearchStrategy(Fzn::basic_search_annotation_t const & basic_search_annotation, std::function<float(std::vector<float> const&)> ml_eval_fun)
-{
-    using namespace std;
-
-    auto const & pred_identifier = get<0>(basic_search_annotation);
-    auto const & var_expr = get<1>(basic_search_annotation);
-    auto const & annotations = get<2>(basic_search_annotation);
-
-    if (pred_identifier == "int_search")
-    {
-        using int_var_t = var<int>::Ptr;
-        using array_int_var_t = vector<int_var_t>;
-
-        // Decision variables
-        array_int_var_t array_int_var = getIntDecisionalVars(var_expr);
-        auto const nVars = static_cast<int>(array_int_var.size());
-        auto const solver = array_int_var[0]->getSolver();
-
-        return [=]()
-        {
-            std::vector<float> pa;
-            for (auto varIdx = 0; varIdx < nVars; varIdx += 1)
-            {
-                auto const & var = array_int_var[varIdx];
-                pa.push_back(var->isBound() ? var->min() : NAN);
-            }
-
-            int_var_t bestVar = nullptr;
-            auto bestVal = INT_MAX;
-            float bestScore = std::numeric_limits<float>::max();
-            for (auto varIdx = 0; varIdx < nVars; varIdx += 1)
-            {
-                auto const &var = array_int_var[varIdx];
-                if (not var->isBound())
-                {
-                    std::cout  << "Evaluating var[" << varIdx << "] with " << var->size() << " values..." << std::endl;
-                    std::vector<float> toEval = pa;
-                    auto const minVal = var->min();
-                    auto const maxVal = var->max();
-                    for (auto val = minVal; val <= maxVal; val += 1)
-                    {
-                        if (var->contains(val))
-                        {
-                            toEval[varIdx] = val;
-                            auto const score = ml_eval_fun(toEval);
-                            std::cout  << "var[" << varIdx << "] = " << val << " -> " << score << std::endl;
-                            if (score < bestScore)
-                            {
-                                bestScore = score;
-                                bestVal = val;
-                                bestVar = var;
-                                std::cout  << "New best: var[" << varIdx << "] = " << bestVal << std::endl;
-                            }
-                        }
-                    }
-                }
-            }
-
-            return indomain_fixed(solver, bestVar, bestVal);
-        };
-    }
-    else
-    {
-        stringstream msg;
-        msg << "Unsupported search annotation : " << pred_identifier;
-        throw runtime_error(msg.str());
-    }
-}
-
 
 std::function<Branches(void)> FznSearchHelper::makeBasicSampleStrategy(Fzn::basic_search_annotation_t const & basic_search_annotation)
 {

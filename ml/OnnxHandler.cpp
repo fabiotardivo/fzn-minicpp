@@ -249,6 +249,12 @@ float OnnxHandler::get_score(const std::string& pa, bool toClean) const
     return get_distance(fst, reconstructed_assignment, snd);
 }
 
+float OnnxHandler::get_score(std::vector<float> const & pa) const
+{
+    const auto [fst, snd] = normalize_pa_inference(pa);
+    const auto reconstructed_assignment = run_inference(fst, snd);
+    return get_distance(fst, reconstructed_assignment, snd);
+}
 
 std::string OnnxHandler::clean_pa(const std::string& pa)
 {
@@ -332,6 +338,41 @@ std::pair<std::vector<float>, std::vector<float>> OnnxHandler::normalize_string_
 
     return {std::move(result), std::move(bitmask)};
 }
+
+std::pair<std::vector<float>, std::vector<float>> OnnxHandler::normalize_pa_inference(std::vector<float> const &  pa) const
+{
+    std::vector<float> result;
+    std::vector<float> bitmask;
+    const double scale_value = m_cfg.max_val * m_cfg.scale_ratio;
+
+    result.reserve(m_cfg.pa_length); // small heuristic to reduce reallocations
+    bitmask.reserve(m_cfg.pa_length);
+
+    for(auto const & val : pa)
+    {
+        if (std::isnan(val))
+        {
+            result.push_back(static_cast<float>(m_cfg.out_of_scale_marker));
+            if (m_cfg.use_bitmask)
+            {
+                bitmask.push_back(0.0f);
+            }
+            else
+            {
+                bitmask.push_back(1.0f);
+            }
+        }
+        else
+        {
+            auto const scaled = val / scale_value;
+            result.push_back(scaled);
+            bitmask.push_back(1.0f);
+        }
+    }
+
+    return {std::move(result), std::move(bitmask)};
+}
+
 
 std::string OnnxHandler::normalize_string_training(
     const std::string& pa) const

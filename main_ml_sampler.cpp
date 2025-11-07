@@ -4,7 +4,7 @@
 #include <solver.hpp>
 
 #include "fzn_search_helper.h"
-#include "ml_sampler.h"
+#include "ml/sampler.h"
 
 int main(int argc, char * argv[])
 {
