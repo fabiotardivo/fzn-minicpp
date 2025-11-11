@@ -65,6 +65,19 @@ namespace ML
             auto const intDecVars = searchHelper.getIntDecisionalVars(fznModel);
             DFSearch search(solver, searchHelper.getSampleStrategy(fznModel));
             auto const nIntDecVars = intDecVars.size();
+            if (idx == 0)
+            {
+                std::lock_guard<std::mutex> lock(outMutex);
+                int maxVal = INT_MIN;
+                for(auto const & var : intDecVars)
+                {
+                    maxVal = std::max(maxVal, var->max());
+                }
+                std::cout << nIntDecVars << std::endl;
+                std::cout << maxVal << std::endl;
+                std::flush(std::cout);
+            }
+
             std::vector<float> lastValidPA(nIntDecVars, NAN);
             std::vector<float> badPA(nIntDecVars, NAN);
 

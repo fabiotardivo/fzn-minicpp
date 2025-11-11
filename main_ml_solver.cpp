@@ -23,6 +23,8 @@ int main(int argc, char * argv[])
     std::string distance = "categorical";
     std::string rank = "worst";
     int lookahead = 0;
+    float scale_ratio = 1.0; // set >1.0 to reserve headroom (e.g. 5.0/4.0)
+    float out_of_scale_marker = -1; // value to use for missing/out-of-scale entries
     cxxopts::Options optsParser("fzn-minicpp-ml", "A C++ MiniZinc solver based on MiniCP.");
     optsParser.custom_help("[Options]");
     optsParser.positional_help("<FlatZinc>");
@@ -36,6 +38,8 @@ int main(int argc, char * argv[])
         ("distance", "Criteria to evaluate reconstruction: categorical, euclidian, levenshtein (Default = categorical).", cxxopts::value<std::string>(distance))
         ("rank", "Criteria to rank scores: best, avg, worst (Default = best)", cxxopts::value<std::string>(rank))
         ("lookahead", "Lookahead depth (Default = 0)", cxxopts::value<int>(lookahead))
+        ("scale", "Scale ratio (Default = 1.0)", cxxopts::value<float>(scale_ratio))
+        ("out-of-scale", "Out of scale marker (Default = -1.0)", cxxopts::value<float>(out_of_scale_marker))
         ("fzn", "FlatZinc", cxxopts::value<std::string>(fzn))
         ("h,help", "Print usage");
     optsParser.parse_positional({"fzn"});
@@ -74,8 +78,6 @@ int main(int argc, char * argv[])
         float max_val = 0; // maximum possible raw value in your domain
         for(auto const & var : intDecVars)
             max_val = std::max(max_val,static_cast<float>(var->max()));
-        float const scale_ratio = 1.0; // set >1.0 to reserve headroom (e.g. 5.0/4.0)
-        float const out_of_scale_marker = -1; // value to use for missing/out-of-scale entries
         DistanceType const distance_type = distanceFromString(distance); // distance computation method
         OnnxHandler::create_instance(model, max_val, pa_length, scale_ratio, out_of_scale_marker, distance_type, masked);
         OnnxHandler const & onnx_handler = OnnxHandler::get_instance();
