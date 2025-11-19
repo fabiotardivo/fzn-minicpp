@@ -15,6 +15,8 @@
 #include "gpu_constraints/bin_packing.cuh"
 #include "gpu_constraints/all_different.cuh"
 #include "gpu_constraints/circuit.cuh"
+#include "gpu_constraints/table.cuh"
+#include "global_constraints/table.hpp"
 
 using backward_implication_t = std::function<void()>;
 
@@ -885,7 +887,18 @@ void FznConstraintHelper::addGlobalConstraintsBuilders()
             auto const tEnd = tBegin + tuple_size;
             _t.emplace_back(tBegin, tEnd);
         }
-        return new (solver) TableCT(x, _t);
+
+        bool const gpu = count_if(anns.begin(), anns.end(), [](Fzn::annotation_t const & ann) -> bool {return ann.first == "gpu";});
+        if (gpu)
+        {
+            return new (solver) TableGPU(x, _t);
+        }
+        else
+        {
+
+            //return new (solver) TableCT(x, _t);
+            return new (solver) Table(x, _t);
+        }
     });
 
     constriants_builders.emplace("minicpp_bin_packing_load", [&] (vector<Fzn::constraint_arg_t> const & args, vector<Fzn::annotation_t> const & anns) -> Constraint::Ptr {

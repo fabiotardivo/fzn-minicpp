@@ -10,7 +10,7 @@ find_package(CUDAToolkit REQUIRED)
 set(CMAKE_CUDA_COMPILER ${CUDAToolkit_NVCC_EXECUTABLE})
 set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-set(CMAKE_CUDA_ARCHITECTURES "80")
+set(CMAKE_CUDA_ARCHITECTURES "86")
 set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 string(APPEND CMAKE_CUDA_FLAGS_DEBUG " -g -G")
 string(APPEND CMAKE_CUDA_FLAGS_RELWITHDEBINFO " -lineinfo")
@@ -41,7 +41,7 @@ FetchContent_Declare(
 FetchContent_Declare(
         libminicpp
         GIT_REPOSITORY https://github.com/fabiotardivo/libminicpp.git
-        GIT_TAG        main
+        GIT_TAG        gpu-dev-table
 )
 FetchContent_MakeAvailable(cxxopts)
 FetchContent_MakeAvailable(libfzn)
@@ -61,12 +61,14 @@ set(FZN_CONSTR_SRC
 set(GLB_CONSTR_SRC
 	global_constraints/cumulative.cpp
 	global_constraints/bin_packing.cpp
+	global_constraints/table.cpp
 )
 set(GPU_CONSTR_SRC
     gpu_constraints/cumulative.cu
     gpu_constraints/bin_packing.cu
     gpu_constraints/all_different.cu
     gpu_constraints/circuit.cu
+    gpu_constraints/table.cu
 )
 set(GPU_SRC
     libfca/BitMatrix.cu
