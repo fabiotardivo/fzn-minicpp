@@ -41,7 +41,7 @@ FetchContent_Declare(
 FetchContent_Declare(
         libminicpp
         GIT_REPOSITORY https://github.com/fabiotardivo/libminicpp.git
-        GIT_TAG        gpu-dev-table
+        GIT_TAG        gpu-dev-smc
 )
 FetchContent_MakeAvailable(cxxopts)
 FetchContent_MakeAvailable(libfzn)
