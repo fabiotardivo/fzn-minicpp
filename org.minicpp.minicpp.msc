@@ -1,0 +1,19 @@
+{
+    "executable": "./build/fzn-minicpp",
+    "id": "org.minicpp.minicpp",
+    "isGUIApplication": false,
+    "mznlib": "./minizinc",
+    "mznlibVersion": 1,
+    "name": "MiniCPP",
+    "needsMznExecutable": false,
+    "needsPathsFile": false,
+    "needsSolns2Out": true,
+    "needsStdlibDir": false,
+    "stdFlags": [
+        "-a",
+        "-n",
+        "-s",
+        "-t"
+    ],
+    "version": "0.1"
+}

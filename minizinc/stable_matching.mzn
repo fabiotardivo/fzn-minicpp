@@ -1,0 +1,2 @@
+predicate minicpp_stable_matching(array [int] of var int: m, array [int] of var int: w, array [int] of int: pm, array [int] of int: pw);
+predicate stable_matching(array [int] of var int: m, array [int] of var int: w, array [int,int] of int: pm, array [int,int] of int: pw) = minicpp_stable_matching(m,w,array1d(pm),array1d(pw));
