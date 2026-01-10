@@ -17,7 +17,7 @@ DistanceType distanceFromString(std::string const & s)
     static const std::unordered_map<std::string, DistanceType> map
     {
             {"categorical", DistanceType::CATEGORICAL},
-            {"euclidian", DistanceType::EUCLIDEAN},
+            {"euclidean", DistanceType::EUCLIDEAN},
             {"levenshtein", DistanceType::LEVENSHTEIN}
     };
 
