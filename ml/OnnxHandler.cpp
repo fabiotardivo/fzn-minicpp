@@ -92,48 +92,39 @@ float OnnxHandler::runInference(const std::vector<float>& pa) const
     const int64_t numVars = static_cast<int64_t>(pa.size());
     std::vector<int64_t> tensorShape = { batchSize, numVars };
 
-    std::vector<Ort::Value> inputTensors;
-    inputTensors.reserve(2);
+    // ORT CreateTensor expects non-const pointer, so copy
+    std::vector<float> values = pa;
 
     Ort::Value valuesTensor = Ort::Value::CreateTensor<float>(
         *memoryInfo,
-        const_cast<float*>(pa.data()),
-        static_cast<size_t>(pa.size()),
+        values.data(),
+        values.size(),
         tensorShape.data(),
         tensorShape.size()
     );
+
+    std::vector<Ort::Value> inputTensors;
     inputTensors.emplace_back(std::move(valuesTensor));
 
-    // Convert input names to const char*
-    std::vector<const char*> inputNamesCstr;
-    inputNamesCstr.reserve(inputNames.size());
-    for (const auto& name : inputNames)
-        inputNamesCstr.push_back(name.c_str());
+    // Fixed names matching export
+    const char* inputName = "values";
+    const char* outputName = "failure_probability";
 
-    // Convert output names to const char*
-    std::vector<const char*> outputNamesCstr;
-    outputNamesCstr.reserve(outputNames.size());
-    for (const auto& name : outputNames)
-        outputNamesCstr.push_back(name.c_str());
-
-    // Run inference
     auto outputTensors = session->Run(
         Ort::RunOptions{ nullptr },
-        inputNamesCstr.data(),
+        &inputName,
         inputTensors.data(),
-        inputTensors.size(),
-        outputNamesCstr.data(),
-        outputNamesCstr.size()
+        1,
+        &outputName,
+        1
     );
 
-    // Extract logit and convert to probability
     const float* outputData = outputTensors[0].GetTensorData<float>();
     const float logit = outputData[0];
 
     const float probability = 1.0f / (1.0f + std::exp(-logit));
     return 1.0f - probability;
 }
-
 
 float OnnxHandler::getFailureProbability(const std::vector<float>& pa) const
 {
