@@ -25,60 +25,55 @@ void OnnxHandler::initialize()
 
     sessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
 
-    // Force single-threaded ONNX Runtime
-    sessionOptions.SetIntraOpNumThreads(1);
-    sessionOptions.SetInterOpNumThreads(1);
-    sessionOptions.SetExecutionMode(ORT_SEQUENTIAL);
-
     // Check for CUDA at runtime
     auto availableProviders = Ort::GetAvailableProviders();
     bool cudaAvailable = std::find(availableProviders.begin(),
                                    availableProviders.end(),
                                    "CUDAExecutionProvider") != availableProviders.end();
 
-                                   if (cudaAvailable)
-                                   {
-                                       try
-                                       {
-                                           OrtCUDAProviderOptions cudaOptions;
-                                           cudaOptions.device_id = 0;
-                                           //cudaOptions.arena_extend_strategy = OrtArenaExtendStrategy::kNextPowerOfTwo;
-                                           cudaOptions.cudnn_conv_algo_search = OrtCudnnConvAlgoSearch::OrtCudnnConvAlgoSearchExhaustive;
-                                           cudaOptions.do_copy_in_default_stream = 1;
+    if (cudaAvailable)
+    {
+        try
+        {
+            OrtCUDAProviderOptions cudaOptions;
+            cudaOptions.device_id = 0;
+            cudaOptions.arena_extend_strategy = OrtArenaExtendStrategy::kNextPowerOfTwo;
+            cudaOptions.cudnn_conv_algo_search = OrtCudnnConvAlgoSearch::OrtCudnnConvAlgoSearchExhaustive;
+            cudaOptions.do_copy_in_default_stream = 1;
 
-                                           sessionOptions.AppendExecutionProvider_CUDA(cudaOptions);
+            sessionOptions.AppendExecutionProvider_CUDA(cudaOptions);
 
-                                           if (verbose)
-                                           {
-                                               std::cout << "[ONNX] CUDA enabled (GPU acceleration active)" << std::endl;
-                                           }
-                                       }
-                                       catch (const Ort::Exception& e)
-                                       {
-                                           std::cout << "[WARNING] CUDA initialization failed: " << e.what() << std::endl;
-                                           std::cout << "[ONNX] Falling back to CPU" << std::endl;
-                                       }
-                                   }
-                                   else if (verbose)
-                                   {
-                                       std::cout << "[ONNX] Using CPU" << std::endl;
-                                   }
+            if (verbose)
+            {
+                std::cout << "[ONNX] CUDA enabled (GPU acceleration active)" << std::endl;
+            }
+        }
+        catch (const Ort::Exception& e)
+        {
+            std::cout << "[WARNING] CUDA initialization failed: " << e.what() << std::endl;
+            std::cout << "[ONNX] Falling back to CPU" << std::endl;
+        }
+    }
+    else if (verbose)
+    {
+        std::cout << "[ONNX] Using CPU" << std::endl;
+    }
 
-                                   session = std::make_unique<Ort::Session>(env, modelPath.c_str(), sessionOptions);
-                                   memoryInfo = std::make_unique<Ort::MemoryInfo>(
-                                       Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU));
+    session = std::make_unique<Ort::Session>(env, modelPath.c_str(), sessionOptions);
+    memoryInfo = std::make_unique<Ort::MemoryInfo>(
+        Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU));
 
-                                   inputNames = session->GetInputNames();
-                                   outputNames = session->GetOutputNames();
+    inputNames = session->GetInputNames();
+    outputNames = session->GetOutputNames();
 
-                                   modelLoaded = true;
+    modelLoaded = true;
 
-                                   if (verbose)
-                                   {
-                                       std::cout << "[ONNX] Model loaded: " << modelPath << std::endl;
-                                       std::cout << "[ONNX] Input count: " << inputNames.size() << std::endl;
-                                       std::cout << "[ONNX] Output count: " << outputNames.size() << std::endl;
-                                   }
+    if (verbose)
+    {
+        std::cout << "[ONNX] Model loaded: " << modelPath << std::endl;
+        std::cout << "[ONNX] Input count: " << inputNames.size() << std::endl;
+        std::cout << "[ONNX] Output count: " << outputNames.size() << std::endl;
+    }
 }
 
 float OnnxHandler::runInference(const std::vector<float>& pa) const
@@ -90,44 +85,57 @@ float OnnxHandler::runInference(const std::vector<float>& pa) const
 
     const int64_t batchSize = 1;
     const int64_t numVars = static_cast<int64_t>(pa.size());
-    std::vector<int64_t> tensorShape = { batchSize, numVars };
+    std::vector<int64_t> tensorShape = {batchSize, numVars};
 
-    // ORT CreateTensor expects non-const pointer, so copy
-    std::vector<float> values = pa;
+    // SIMPLIFIED: Just pass raw float values directly!
+    // ONNX model handles NaN detection, masking, and value shifting internally
+
+    // Create input tensor with raw values (including NaN)
+    std::vector<float> rawValues = pa;  // Copy input vector
 
     Ort::Value valuesTensor = Ort::Value::CreateTensor<float>(
         *memoryInfo,
-        values.data(),
-        values.size(),
+        rawValues.data(),
+        rawValues.size(),
         tensorShape.data(),
         tensorShape.size()
     );
 
+    // Prepare input tensors vector (only one input now!)
     std::vector<Ort::Value> inputTensors;
     inputTensors.emplace_back(std::move(valuesTensor));
 
-    // Fixed names matching export
-    const char* inputName = "values";
-    const char* outputName = "failure_probability";
+    // Convert input names to const char*
+    std::vector<const char*> inputNamesCstr;
+    inputNamesCstr.reserve(inputNames.size());
+    for (const auto& name : inputNames)
+        inputNamesCstr.push_back(name.c_str());
 
+    // Convert output names to const char*
+    std::vector<const char*> outputNamesCstr;
+    outputNamesCstr.reserve(outputNames.size());
+    for (const auto& name : outputNames)
+        outputNamesCstr.push_back(name.c_str());
+
+    // Run inference with raw values
     auto outputTensors = session->Run(
-        Ort::RunOptions{ nullptr },
-        &inputName,
+        Ort::RunOptions{nullptr},
+        inputNamesCstr.data(),
         inputTensors.data(),
-        1,
-        &outputName,
-        1
+        inputTensors.size(),
+        outputNamesCstr.data(),
+        outputNamesCstr.size()
     );
 
+    // Extract failure probability (already sigmoid'd in ONNX model!)
     const float* outputData = outputTensors[0].GetTensorData<float>();
-    const float logit = outputData[0];
+    float probability = outputData[0];
 
-    const float probability = 1.0f / (1.0f + std::exp(-logit));
-    return 1.0f - probability;
+    return probability;
 }
 
 float OnnxHandler::getFailureProbability(const std::vector<float>& pa) const
 {
-    // Alias for runInference - now returns failure probability directly
+    // Same as runInference - now returns probability directly
     return runInference(pa);
 }
