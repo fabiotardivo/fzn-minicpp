@@ -24,6 +24,10 @@ void OnnxHandler::initialize()
         return;
 
     sessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+    sessionOptions.SetIntraOpNumThreads(1);
+    sessionOptions.SetInterOpNumThreads(1);
+    sessionOptions.SetExecutionMode(ORT_SEQUENTIAL);
+
 
     // Check for CUDA at runtime
     auto availableProviders = Ort::GetAvailableProviders();
