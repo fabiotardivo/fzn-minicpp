@@ -34,7 +34,7 @@ private:
     bool verbose = false;
     bool modelLoaded = false;
 
-    Ort::Env env{ORT_LOGGING_LEVEL_ERROR, "TransformerEnv"};
+    Ort::Env env{ORT_LOGGING_LEVEL_VERBOSE, "TransformerEnv"};
     Ort::SessionOptions sessionOptions;
     std::unique_ptr<Ort::Session> session;
     std::unique_ptr<Ort::MemoryInfo> memoryInfo;
