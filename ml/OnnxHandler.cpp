@@ -25,6 +25,12 @@ void OnnxHandler::initialize()
 
     sessionOptions.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
 
+    // Force single-threaded ONNX Runtime
+    sessionOptions.SetIntraOpNumThreads(1);
+    sessionOptions.SetInterOpNumThreads(1);
+    sessionOptions.SetExecutionMode(ORT_SEQUENTIAL);
+    sessionOptions.DisablePerSessionThreads();
+
     // Check for CUDA at runtime
     auto availableProviders = Ort::GetAvailableProviders();
     bool cudaAvailable = std::find(availableProviders.begin(),
