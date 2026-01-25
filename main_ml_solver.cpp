@@ -77,7 +77,7 @@ int main(int argc, char * argv[])
             for (auto const & pa : pas)
             {
                 //ML::printPartialAssignment(pa);
-                scores.push_back(OnnxHandler::getInstance(model).runInference(pa));
+                scores.push_back(1.0-OnnxHandler::getInstance(model).runInference(pa));
             }
             auto result = ML::getScoreVal(varIdx,pas,scores,rankType);
             return result;
