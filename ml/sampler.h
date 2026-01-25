@@ -68,14 +68,18 @@ namespace ML
             if (idx == 0)
             {
                 std::lock_guard<std::mutex> lock(outMutex);
-                int maxVal = INT_MIN;
-                for(auto const & var : intDecVars)
+                auto const nIntVars = intDecVars.size();
+                for(int i = 0; i < nIntDecVars; i += 1)
                 {
-                    maxVal = std::max(maxVal, var->max());
+                    printf(i == 0 ? "%d" : ",%d", intDecVars[i]->min());
                 }
-                std::cout << nIntDecVars << std::endl;
-                std::cout << maxVal << std::endl;
-                std::flush(std::cout);
+                printf("\n");
+                for(int i = 0; i < nIntDecVars; i += 1)
+                {
+                    printf(i == 0 ? "%d" : ",%d", intDecVars[i]->max());
+                }
+                printf("\n");
+               fflush(stdout);
             }
 
             std::vector<float> lastValidPA(nIntDecVars, NAN);
