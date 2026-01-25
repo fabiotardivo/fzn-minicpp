@@ -44,6 +44,10 @@ FetchContent_MakeAvailable(libfzn)
 FetchContent_MakeAvailable(libminicpp)
 FetchContent_MakeAvailable(onnxruntime)
 
+add_library(onnxruntime INTERFACE)
+target_include_directories(onnxruntime INTERFACE ${onnxruntime_SOURCE_DIR}/include)
+target_link_libraries(onnxruntime INTERFACE ${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so)
+
 # Sources
 set(FZN_CONSTR_SRC
 	fzn_constraints/bool_array.cpp
