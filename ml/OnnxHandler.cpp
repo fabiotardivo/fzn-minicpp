@@ -75,13 +75,6 @@ void OnnxHandler::initialize()
 
                                    if (verbose)
                                    {
-                                       auto providers = session->GetProviders();
-                                       std::cout << "[ONNX] Active providers:" << std::endl;
-                                       for (const auto& p : providers)
-                                       {
-                                           std::cout << "  - " << p << std::endl;
-                                       }
-
                                        std::cout << "[ONNX] Model loaded: " << modelPath << std::endl;
                                        std::cout << "[ONNX] Input count: " << inputNames.size() << std::endl;
                                        std::cout << "[ONNX] Output count: " << outputNames.size() << std::endl;
