@@ -37,6 +37,7 @@ void OnnxHandler::initialize()
                                        {
                                            OrtCUDAProviderOptions cudaOptions;
                                            cudaOptions.device_id = 0;
+                                           cudaOptions.arena_extend_strategy = OrtArenaExtendStrategy::kNextPowerOfTwo;
                                            cudaOptions.cudnn_conv_algo_search = OrtCudnnConvAlgoSearch::OrtCudnnConvAlgoSearchExhaustive;
                                            cudaOptions.do_copy_in_default_stream = 1;
 
@@ -105,7 +106,7 @@ float OnnxHandler::runInference(const std::vector<float>& pa) const
             // Assigned variable - convert to 1-based class index
             int64_t classIdx = static_cast<int64_t>(std::round(val)) + 1;
             classIndices.push_back(classIdx);
-            mask.push_back(1.0f);       // Include in reconstruction
+            mask.push_back(1.0f);       // Include in evaluation
         }
     }
 
@@ -144,7 +145,19 @@ float OnnxHandler::runInference(const std::vector<float>& pa) const
                                       outputNamesCstr.data(),
                                       outputNamesCstr.size());
 
-    // Extract reconstruction error (single float value)
+    // Extract failure probability logit (single float value)
+    // The transformer outputs a logit; apply sigmoid to get probability
     const float* outputData = outputTensors[0].GetTensorData<float>();
-    return outputData[0];
+    float logit = outputData[0];
+
+    // Apply sigmoid: p = 1 / (1 + exp(-logit))
+    float probability = 1.0f / (1.0f + std::exp(-logit));
+
+    return probability;
+}
+
+float OnnxHandler::getFailureProbability(const std::vector<float>& pa) const
+{
+    // Alias for runInference - now returns failure probability directly
+    return runInference(pa);
 }

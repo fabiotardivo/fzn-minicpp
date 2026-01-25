@@ -11,8 +11,12 @@ class OnnxHandler
 public:
     static OnnxHandler& getInstance(const std::string& modelPath = "");
 
-    // Get reconstruction error score for a partial assignment
+    // Get failure probability for a partial assignment
+    // Returns probability in [0, 1] that the partial assignment leads to failure
     float runInference(const std::vector<float>& pa) const;
+
+    // Alias for runInference - clearer naming for transformer model
+    float getFailureProbability(const std::vector<float>& pa) const;
 
     void setVerbose(bool verbose) { this->verbose = verbose; }
 
@@ -30,7 +34,7 @@ private:
     bool verbose = false;
     bool modelLoaded = false;
 
-    Ort::Env env{ORT_LOGGING_LEVEL_ERROR, "AutoencoderEnv"};
+    Ort::Env env{ORT_LOGGING_LEVEL_ERROR, "TransformerEnv"};
     Ort::SessionOptions sessionOptions;
     std::unique_ptr<Ort::Session> session;
     std::unique_ptr<Ort::MemoryInfo> memoryInfo;
