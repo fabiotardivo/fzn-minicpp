@@ -90,44 +90,19 @@ float OnnxHandler::runInference(const std::vector<float>& pa) const
 
     const int64_t batchSize = 1;
     const int64_t numVars = static_cast<int64_t>(pa.size());
-    std::vector<int64_t> tensorShape = {batchSize, numVars};
+    std::vector<int64_t> tensorShape = { batchSize, numVars };
 
-    // Convert to class indices and mask
-    std::vector<int64_t> classIndices;
-    std::vector<float> mask;
-    classIndices.reserve(numVars);
-    mask.reserve(numVars);
-
-    for (const float val : pa)
-    {
-        if (std::isnan(val))
-        {
-            // Unassigned variable
-            classIndices.push_back(0);  // Class 0 reserved for NaN
-            mask.push_back(0.0f);       // Mask out
-        }
-        else
-        {
-            // Assigned variable - convert to 1-based class index
-            int64_t classIdx = static_cast<int64_t>(std::round(val)) + 1;
-            classIndices.push_back(classIdx);
-            mask.push_back(1.0f);       // Include in evaluation
-        }
-    }
-
-    // Create input tensors
-    Ort::Value valuesTensor = Ort::Value::CreateTensor<int64_t>(
-        *memoryInfo, classIndices.data(), classIndices.size(),
-                                                                tensorShape.data(), tensorShape.size());
-
-    Ort::Value maskTensor = Ort::Value::CreateTensor<float>(
-        *memoryInfo, mask.data(), mask.size(),
-                                                            tensorShape.data(), tensorShape.size());
-
-    // Prepare input tensors vector
     std::vector<Ort::Value> inputTensors;
+    inputTensors.reserve(2);
+
+    Ort::Value valuesTensor = Ort::Value::CreateTensor<float>(
+        *memoryInfo,
+        const_cast<float*>(pa.data()),
+        static_cast<size_t>(pa.size()),
+        tensorShape.data(),
+        tensorShape.size()
+    );
     inputTensors.emplace_back(std::move(valuesTensor));
-    inputTensors.emplace_back(std::move(maskTensor));
 
     // Convert input names to const char*
     std::vector<const char*> inputNamesCstr;
@@ -141,25 +116,24 @@ float OnnxHandler::runInference(const std::vector<float>& pa) const
     for (const auto& name : outputNames)
         outputNamesCstr.push_back(name.c_str());
 
-    // Run inference with both values and mask
+    // Run inference
     auto outputTensors = session->Run(
-        Ort::RunOptions{nullptr},
+        Ort::RunOptions{ nullptr },
         inputNamesCstr.data(),
-                                      inputTensors.data(),
-                                      inputTensors.size(),
-                                      outputNamesCstr.data(),
-                                      outputNamesCstr.size());
+        inputTensors.data(),
+        inputTensors.size(),
+        outputNamesCstr.data(),
+        outputNamesCstr.size()
+    );
 
-    // Extract failure probability logit (single float value)
-    // The transformer outputs a logit; apply sigmoid to get probability
+    // Extract logit and convert to probability
     const float* outputData = outputTensors[0].GetTensorData<float>();
-    float logit = outputData[0];
+    const float logit = outputData[0];
 
-    // Apply sigmoid: p = 1 / (1 + exp(-logit))
-    float probability = 1.0f / (1.0f + std::exp(-logit));
-
-    return probability;
+    const float probability = 1.0f / (1.0f + std::exp(-logit));
+    return 1.0f - probability;
 }
+
 
 float OnnxHandler::getFailureProbability(const std::vector<float>& pa) const
 {
