@@ -31,7 +31,7 @@ FetchContent_Declare(
         GIT_TAG        main
 )
 set(ONNXRUNTIME_VERSION 1.23.1)
-set(ONNXRUNTIME_PLATFORM linux-x64)
+set(ONNXRUNTIME_PLATFORM linux-x64-gpu)
 set(ONNXRUNTIME_URL
         https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/onnxruntime-${ONNXRUNTIME_PLATFORM}-${ONNXRUNTIME_VERSION}.tgz
 )
@@ -82,7 +82,10 @@ target_link_libraries(fzn-minicpp cxxopts libfzn libminicpp)
 
 add_executable(fzn-minicpp-ml-solver main_ml_solver.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC} ${ML_SRC})
 target_include_directories(fzn-minicpp-ml-solver PRIVATE ${onnxruntime_SOURCE_DIR}/include ml)
-target_link_libraries(fzn-minicpp-ml-solver cxxopts libfzn libminicpp ${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so)
+target_link_libraries(fzn-minicpp-ml-solver cxxopts libfzn libminicpp
+        ${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so
+        ${onnxruntime_SOURCE_DIR}/lib/libonnxruntime_providers_cuda.so
+        ${onnxruntime_SOURCE_DIR}/lib/libonnxruntime_providers_shared.so)
 
 add_executable(fzn-minicpp-ml-sampler main_ml_sampler.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC})
 target_link_libraries(fzn-minicpp-ml-sampler cxxopts libfzn libminicpp)

@@ -66,6 +66,7 @@ int main(int argc, char * argv[])
 
         // Load ML evaluator
         ML::RankType rankType = ML::rankFromString(rank);
+        OnnxHandler::getInstance(model).setVerbose(true);
 
         ML::EvalFunctionType eval_fun = [&](int varIdx, ML::IntVars const & vars)
         {
