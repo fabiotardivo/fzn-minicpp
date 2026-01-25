@@ -37,7 +37,7 @@ void OnnxHandler::initialize()
         {
             OrtCUDAProviderOptions cudaOptions;
             cudaOptions.device_id = 0;
-            cudaOptions.arena_extend_strategy = OrtArenaExtendStrategy::kNextPowerOfTwo;
+            //cudaOptions.arena_extend_strategy = OrtArenaExtendStrategy::kNextPowerOfTwo;
             cudaOptions.cudnn_conv_algo_search = OrtCudnnConvAlgoSearch::OrtCudnnConvAlgoSearchExhaustive;
             cudaOptions.do_copy_in_default_stream = 1;
 
