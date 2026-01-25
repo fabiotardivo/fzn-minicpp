@@ -19,12 +19,8 @@ int main(int argc, char * argv[])
     // Parse options
     std::string fzn;
     std::string model;
-    bool masked = true;
-    std::string distance = "categorical";
     std::string rank = "worst";
     int lookahead = 0;
-    float scale_ratio = 1.0; // set >1.0 to reserve headroom (e.g. 5.0/4.0)
-    float out_of_scale_marker = -1; // value to use for missing/out-of-scale entries
     cxxopts::Options optsParser("fzn-minicpp-ml", "A C++ MiniZinc solver based on MiniCP.");
     optsParser.custom_help("[Options]");
     optsParser.positional_help("<FlatZinc>");
@@ -34,12 +30,8 @@ int main(int argc, char * argv[])
         ("s", "Print search statistics", cxxopts::value<bool>())
         ("t", "Stop search after <t> ms", cxxopts::value<unsigned int>())
         ("model", "Machine learning model in ONNX format", cxxopts::value<std::string>(model))
-        ("masked", "Ignore unassigned variables (Default = True)", cxxopts::value<bool>(masked))
-        ("distance", "Criteria to evaluate reconstruction: categorical, euclidean, levenshtein (Default = categorical).", cxxopts::value<std::string>(distance))
         ("rank", "Criteria to rank scores: best, avg, worst (Default = best)", cxxopts::value<std::string>(rank))
         ("lookahead", "Lookahead depth (Default = 0)", cxxopts::value<int>(lookahead))
-        ("scale", "Scale ratio (Default = 1.0)", cxxopts::value<float>(scale_ratio))
-        ("out-of-scale", "Out of scale marker (Default = -1.0)", cxxopts::value<float>(out_of_scale_marker))
         ("fzn", "FlatZinc", cxxopts::value<std::string>(fzn))
         ("h,help", "Print usage");
     optsParser.parse_positional({"fzn"});
@@ -73,14 +65,6 @@ int main(int argc, char * argv[])
         FznSearchHelper searchHelper(solver, varsHelper);
 
         // Load ML evaluator
-        ML::IntVars const & intDecVars = searchHelper.getIntDecisionalVars(fznModel);
-        size_t pa_length = intDecVars.size(); // Number of variables in the problems and length of the pa
-        float max_val = 0; // maximum possible raw value in your domain
-        for(auto const & var : intDecVars)
-            max_val = std::max(max_val,static_cast<float>(var->max()));
-        DistanceType const distance_type = distanceFromString(distance); // distance computation method
-        OnnxHandler::create_instance(model, max_val, pa_length, scale_ratio, out_of_scale_marker, distance_type, masked);
-        OnnxHandler const & onnx_handler = OnnxHandler::get_instance();
         ML::RankType rankType = ML::rankFromString(rank);
 
         ML::EvalFunctionType eval_fun = [&](int varIdx, ML::IntVars const & vars)
@@ -92,7 +76,7 @@ int main(int argc, char * argv[])
             for (auto const & pa : pas)
             {
                 //ML::printPartialAssignment(pa);
-                scores.push_back(onnx_handler.get_score(pa));
+                scores.push_back(OnnxHandler::getInstance(model).runInference(pa));
             }
             auto result = ML::getScoreVal(varIdx,pas,scores,rankType);
             return result;
