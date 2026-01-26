@@ -9,7 +9,7 @@ TorchHandler& TorchHandler::getInstance(const std::string& modelPath)
 }
 
 TorchHandler::TorchHandler(const std::string& modelPath)
-: modelPath(modelPath), device(torch::kCPU)
+: modelPath(modelPath), device(torch::Device(torch::kCPU))
 {
     if (!modelPath.empty())
     {
@@ -27,7 +27,7 @@ void TorchHandler::initialize()
         // Check for CUDA availability
         if (torch::cuda::is_available())
         {
-            device = torch::kCUDA;
+            device = torch::Device(torch::kCUDA, 0);
             if (verbose)
             {
                 std::cout << "[PyTorch] CUDA enabled (GPU acceleration active)" << std::endl;
@@ -67,16 +67,14 @@ float TorchHandler::runInference(const std::vector<float>& pa) const
 
     try
     {
-        // Convert to tensor: raw float values (model handles NaN preprocessing internally)
-        // Need to copy data because from_blob doesn't own it
-        std::vector<float> paCopy = pa;
+        // Create tensor options
+        auto options = torch::TensorOptions().dtype(torch::kFloat32).device(device);
 
-        auto options = torch::TensorOptions().dtype(torch::kFloat32);
-        torch::Tensor rawValues = torch::from_blob(
-            paCopy.data(),
-                                                   {1, static_cast<long>(pa.size())},
-                                                   options
-        ).clone().to(device);
+        // Create tensor directly on target device
+        torch::Tensor rawValues = torch::empty({1, static_cast<int64_t>(pa.size())}, options);
+
+        // Copy data
+        std::memcpy(rawValues.data_ptr<float>(), pa.data(), pa.size() * sizeof(float));
 
         // Run inference
         torch::NoGradGuard no_grad;
@@ -86,7 +84,7 @@ float TorchHandler::runInference(const std::vector<float>& pa) const
         auto output = model.forward(inputs).toTensor();
 
         // Move to CPU and get failure probability (single value)
-        output = output.to(torch::kCPU);
+        output = output.to(torch::Device(torch::kCPU));
         return output.item<float>();
     }
     catch (const c10::Error& e)
@@ -113,25 +111,22 @@ std::vector<float> TorchHandler::runInferenceBatch(const std::vector<std::vector
         const size_t batchSize = pasBatch.size();
         const size_t numVars = pasBatch[0].size();
 
-        // Flatten batch into single vector
-        std::vector<float> flattenedData;
-        flattenedData.reserve(batchSize * numVars);
-        for (const auto& pa : pasBatch)
+        // Create tensor options
+        auto options = torch::TensorOptions().dtype(torch::kFloat32).device(device);
+
+        // Create tensor directly on target device
+        torch::Tensor rawValues = torch::empty({static_cast<int64_t>(batchSize), static_cast<int64_t>(numVars)}, options);
+
+        // Copy data row by row
+        float* dataPtr = rawValues.data_ptr<float>();
+        for (size_t i = 0; i < batchSize; ++i)
         {
-            if (pa.size() != numVars)
+            if (pasBatch[i].size() != numVars)
             {
                 throw std::runtime_error("[PyTorch] Inconsistent variable count in batch");
             }
-            flattenedData.insert(flattenedData.end(), pa.begin(), pa.end());
+            std::memcpy(dataPtr + i * numVars, pasBatch[i].data(), numVars * sizeof(float));
         }
-
-        // Convert to tensor
-        auto options = torch::TensorOptions().dtype(torch::kFloat32);
-        torch::Tensor rawValues = torch::from_blob(
-            flattenedData.data(),
-                                                   {static_cast<long>(batchSize), static_cast<long>(numVars)},
-                                                   options
-        ).clone().to(device);
 
         // Run inference
         torch::NoGradGuard no_grad;
@@ -141,7 +136,7 @@ std::vector<float> TorchHandler::runInferenceBatch(const std::vector<std::vector
         auto output = model.forward(inputs).toTensor();
 
         // Move to CPU and convert to vector
-        output = output.to(torch::kCPU);
+        output = output.to(torch::Device(torch::kCPU));
 
         // Handle both (batch, 1) and (batch,) shapes
         output = output.squeeze();
