@@ -33,9 +33,9 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/fabiotardivo/libminicpp.git
         GIT_TAG        main
 )
-set(LIBTORCH_DEVICE "cu126")
-set(LIBTORCH_VERSION 2.10.0)
-set(LIBTORCH_URL https://download.pytorch.org/libtorch/${LIBTORCH_DEVICE}/libtorch-shared-with-deps-${LIBTORCH_VERSION}%2B${LIBTORCH_DEVICE}.zip)
+set(LIBTORCH_DEVICE "cu118")
+set(LIBTORCH_VERSION 2.7.1)
+set(LIBTORCH_URL https://download.pytorch.org/libtorch/${LIBTORCH_DEVICE}/libtorch-cxx11-abi-shared-with-deps-${LIBTORCH_VERSION}%2B${LIBTORCH_DEVICE}.zip)
 FetchContent_Declare(
         libtorch
         URL ${LIBTORCH_URL}
