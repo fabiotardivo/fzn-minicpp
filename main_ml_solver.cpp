@@ -1,3 +1,4 @@
+#include <ml/TorchHandler.h>
 #include <Parser.h>
 #include <Printer.h>
 #include <solver.hpp>
@@ -8,7 +9,7 @@
 #include "fzn_statistics_helper.h"
 #include "fzn_variables_helper.h"
 #include <libfca/Slice.hpp>
-#include <ml/TorchHandler.h>
+
 #include <ml/utils.h>
 #include <sstream>
 
