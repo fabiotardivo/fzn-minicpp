@@ -33,23 +33,19 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/fabiotardivo/libminicpp.git
         GIT_TAG        main
 )
-
-
-set(LIBTORCH_DEVICE "cu128")
-set(LIBTORCH_VERSION "2.7.0")
-set(LIBTORCH_URL
-        https://download.pytorch.org/libtorch/${LIBTORCH_DEVICE}/libtorch-cxx11-abi-shared-with-deps-${LIBTORCH_VERSION}%2B${LIBTORCH_DEVICE}.zip
-)
+set(LIBTORCH_DEVICE "cu126")
+set(LIBTORCH_VERSION 2.10.0)
+set(LIBTORCH_URL https://download.pytorch.org/libtorch/${LIBTORCH_DEVICE}/libtorch-shared-with-deps-${LIBTORCH_VERSION}%2B${LIBTORCH_DEVICE}.zip)
 FetchContent_Declare(
         libtorch
         URL ${LIBTORCH_URL}
 )
-
 FetchContent_MakeAvailable(cxxopts libfzn libminicpp libtorch)
 
 # Find Torch package
-set(Torch_DIR "${libtorch_SOURCE_DIR}/share/cmake/Torch")
+set(CMAKE_PREFIX_PATH ${libtorch_SOURCE_DIR})
 find_package(Torch REQUIRED)
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
 # Sources
 set(FZN_CONSTR_SRC
@@ -87,7 +83,7 @@ target_link_libraries(fzn-minicpp cxxopts libfzn libminicpp)
 
 add_executable(fzn-minicpp-ml-solver main_ml_solver.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC} ${ML_SRC})
 target_include_directories(fzn-minicpp-ml-solver PRIVATE ml)
-target_link_libraries(fzn-minicpp-ml-solver cxxopts libfzn libminicpp ${TORCH_LIBRARIES})
+target_link_libraries(fzn-minicpp-ml-solver cxxopts libfzn libminicpp  Torch::Torch)
 
 add_executable(fzn-minicpp-ml-sampler main_ml_sampler.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC})
 target_link_libraries(fzn-minicpp-ml-sampler cxxopts libfzn libminicpp)
