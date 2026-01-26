@@ -9,7 +9,7 @@ TorchHandler& TorchHandler::getInstance(const std::string& modelPath)
 }
 
 TorchHandler::TorchHandler(const std::string& modelPath)
-: modelPath(modelPath), device(torch::Device(torch::kCPU))
+: modelPath(modelPath), device(torch::kCPU)
 {
     if (!modelPath.empty())
     {
@@ -27,7 +27,7 @@ void TorchHandler::initialize()
         // Check for CUDA availability
         if (torch::cuda::is_available())
         {
-            device = torch::Device(torch::kCUDA, 0);
+            device = torch::kCUDA;
             if (verbose)
             {
                 std::cout << "[PyTorch] CUDA enabled (GPU acceleration active)" << std::endl;
@@ -71,7 +71,7 @@ float TorchHandler::runInference(const std::vector<float>& pa) const
         auto options = torch::TensorOptions().dtype(torch::kFloat32).device(device);
 
         // Create tensor directly on target device
-        torch::Tensor rawValues = torch::empty({1, static_cast<int64_t>(pa.size())}, options);
+        torch::Tensor rawValues = torch::empty({1, static_cast<long>(pa.size())}, options);
 
         // Copy data
         std::memcpy(rawValues.data_ptr<float>(), pa.data(), pa.size() * sizeof(float));
@@ -84,7 +84,7 @@ float TorchHandler::runInference(const std::vector<float>& pa) const
         auto output = model.forward(inputs).toTensor();
 
         // Move to CPU and get failure probability (single value)
-        output = output.to(torch::Device(torch::kCPU));
+        output = output.to(torch::kCPU);
         return output.item<float>();
     }
     catch (const c10::Error& e)
@@ -115,7 +115,7 @@ std::vector<float> TorchHandler::runInferenceBatch(const std::vector<std::vector
         auto options = torch::TensorOptions().dtype(torch::kFloat32).device(device);
 
         // Create tensor directly on target device
-        torch::Tensor rawValues = torch::empty({static_cast<int64_t>(batchSize), static_cast<int64_t>(numVars)}, options);
+        torch::Tensor rawValues = torch::empty({static_cast<long>(batchSize), static_cast<long>(numVars)}, options);
 
         // Copy data row by row
         float* dataPtr = rawValues.data_ptr<float>();
@@ -136,7 +136,7 @@ std::vector<float> TorchHandler::runInferenceBatch(const std::vector<std::vector
         auto output = model.forward(inputs).toTensor();
 
         // Move to CPU and convert to vector
-        output = output.to(torch::Device(torch::kCPU));
+        output = output.to(torch::kCPU);
 
         // Handle both (batch, 1) and (batch,) shapes
         output = output.squeeze();
