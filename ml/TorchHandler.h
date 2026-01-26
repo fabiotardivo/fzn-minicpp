@@ -34,6 +34,6 @@ private:
     bool verbose = false;
     bool modelLoaded = false;
 
-    torch::jit::script::Module model;
+    mutable torch::jit::script::Module model;
     torch::Device device = torch::kCPU;
 };
