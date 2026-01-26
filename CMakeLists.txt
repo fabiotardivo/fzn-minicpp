@@ -36,9 +36,9 @@ FetchContent_Declare(
 
 
 set(LIBTORCH_DEVICE "cu128")
-set(LIBTORCH_VERSION 2.10)
+set(LIBTORCH_VERSION 2.10.0)
 set(LIBTORCH_URL
-        https://download.pytorch.org/libtorch/${LIBTORCH_DEVICE}/libtorch-cxx11-abi-shared-with-deps-${LIBTORCH_VERSION}%2B${LIBTORCH_DEVICE}.zip
+        https://download.pytorch.org/libtorch/${LIBTORCH_DEVICE}/libtorch-shared-with-deps-${LIBTORCH_VERSION}%2B${LIBTORCH_DEVICE}.zip
 )
 
 FetchContent_Declare(
