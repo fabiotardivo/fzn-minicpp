@@ -84,22 +84,25 @@ int main(int argc, char * argv[])
             auto const & base_pas = ML::getAllPartialAssignments(varIdx, vars, base_pa);
             auto const & pas = ML::getLookahead(lookahead, vars, base_pas);
 
+            // Convert list to vector for batching (if pas is a list)
+            std::vector<std::vector<float>> pasVec(pas.begin(), pas.end());
+
             std::vector<float> scores;
-            scores.reserve(pas.size());
+            scores.reserve(pasVec.size());
 
             // Batch inference
-            if (pas.size() <= static_cast<size_t>(batchSize))
+            if (pasVec.size() <= static_cast<size_t>(batchSize))
             {
                 // Single batch - process all at once
-                scores = TorchHandler::getInstance(model).runInferenceBatch(pas);
+                scores = TorchHandler::getInstance(model).runInferenceBatch(pasVec);
             }
             else
             {
                 // Multiple batches - process in chunks
-                for (size_t i = 0; i < pas.size(); i += batchSize)
+                for (size_t i = 0; i < pasVec.size(); i += batchSize)
                 {
-                    size_t end = std::min(i + batchSize, pas.size());
-                    std::vector<std::vector<float>> batch(pas.begin() + i, pas.begin() + end);
+                    size_t end = std::min(i + batchSize, pasVec.size());
+                    std::vector<std::vector<float>> batch(pasVec.begin() + i, pasVec.begin() + end);
 
                     auto batchScores = TorchHandler::getInstance(model).runInferenceBatch(batch);
                     scores.insert(scores.end(), batchScores.begin(), batchScores.end());
