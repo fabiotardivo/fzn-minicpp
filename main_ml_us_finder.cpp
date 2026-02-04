@@ -4,7 +4,7 @@
 #include <solver.hpp>
 
 #include "fzn_search_helper.h"
-#include "ml/usFinder.h"
+#include "ml/USFinder.h"
 
 std::string readFile(std::string const & fPath) {
     std::ifstream in(fPath, std::ios::binary);
@@ -28,18 +28,20 @@ int main(int argc, char * argv[])
     using namespace std;
 
     // Parse options
-    int sTimeout = std::numeric_limits<int>::max();
+    int timeout = std::numeric_limits<int>::max();
     int nFinders = std::thread::hardware_concurrency();
     int nAttempts = 3;
     std::string fzn;
-    std::string pasFile;
+    std::string pasPath;
+    std::string outPath;
     cxxopts::Options optsParser("fzn-minicpp", "A C++ MiniZinc solver based on MiniCP.");
     optsParser.custom_help("[Options]");
     optsParser.positional_help("<FlatZinc>");
     optsParser.add_options()
-        ("t,timeout", "Stop search after <t> s", cxxopts::value(sTimeout))
+        ("t,timeout", "Stop search after <t> s", cxxopts::value(timeout))
         ("f,finders", "Number of finders", cxxopts::value(nFinders))
-        ("pas", "Partial assignments file (csv)", cxxopts::value(pasFile))
+        ("pas", "Partial assignments file path", cxxopts::value(pasPath))
+        ("o,output", "Output file path", cxxopts::value(outPath))
         ("a,attempts", "Attempts to find MUS ", cxxopts::value(nAttempts))
         ("fzn", "FlatZinc", cxxopts::value(fzn))
         ("h,help", "Print usage");
@@ -47,10 +49,10 @@ int main(int argc, char * argv[])
 
     auto args = optsParser.parse(argc, argv);
 
-    if ((args.count("h") == 0) and (not pasFile.empty()) and (not fzn.empty()))
+    if ((args.count("h") == 0) and (not pasPath.empty()) and (not outPath.empty()) and (not fzn.empty()))
     {
         // Read partial assignments file
-        std::string pasString = readFile(pasFile);
+        std::string pasString = readFile(pasPath);
         std::istringstream iss(pasString);
 
         // Skip first 2 header lines
@@ -74,8 +76,9 @@ int main(int argc, char * argv[])
         if (pasLines.empty()) throw std::runtime_error("No partial assignments");
         if (pasLines.size() % 2 != 0) throw std::runtime_error("Odd number of partial assignments");
 
-        // Launch samplers
+        // Launch finders
         bool stop = false;
+        auto outFile = openFile(outPath);
         std::mutex outMutex;
         std::vector<std::thread> fThreads;
         fThreads.reserve(nFinders);
@@ -90,17 +93,18 @@ int main(int argc, char * argv[])
                 pasLines.begin() + end
             );
 
-            fThreads.emplace_back(ML::UsFinder,
+            fThreads.emplace_back(ML::USFinder,
                                     fIdx,
                                     nAttempts,
                                     fLines,
                                     std::ref(fzn),
+                                    std::ref(outFile),
                                     std::ref(outMutex),
                                     std::ref(stop));
         }
 
         // Timeout
-        std::this_thread::sleep_for(std::chrono::seconds(sTimeout));
+        std::this_thread::sleep_for(std::chrono::seconds(timeout));
         stop = true;
         for (auto & t : fThreads)
         {

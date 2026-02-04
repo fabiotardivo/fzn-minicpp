@@ -4,6 +4,7 @@
 #include <functional>
 
 #include <Types.h>
+#include <constraint.hpp>
 #include "fzn_variables_helper.h"
 
 class FznConstraintHelper

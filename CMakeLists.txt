@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 project(fzn-minicpp CXX)
+include(FetchContent)
 
 # Build
 if(NOT CMAKE_BUILD_TYPE)
@@ -14,39 +15,32 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories(.)
 
 # Dependencies
-include(FetchContent)
-
 FetchContent_Declare(
         cxxopts
         GIT_REPOSITORY https://github.com/jarro2783/cxxopts.git
         GIT_TAG        master
 )
-
 FetchContent_Declare(
         libfzn
         GIT_REPOSITORY https://github.com/fabiotardivo/libfzn.git
         GIT_TAG        main
 )
-
 FetchContent_Declare(
         libminicpp
         GIT_REPOSITORY https://github.com/fabiotardivo/libminicpp.git
         GIT_TAG        main
 )
-FetchContent_MakeAvailable(cxxopts libfzn libminicpp)
-
-# Use PyTorch installation
-execute_process(
-        COMMAND python3 -c "import torch; print(torch.utils.cmake_prefix_path)"
-        OUTPUT_VARIABLE TORCH_CMAKE_PATH
-        OUTPUT_STRIP_TRAILING_WHITESPACE
+set(ONNXRUNTIME_VERSION 1.23.2)
+set(ONNXRUNTIME_PLATFORM linux-x64-gpu)
+FetchContent_Declare(
+        onnxruntime
+        URL  https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/onnxruntime-${ONNXRUNTIME_PLATFORM}-${ONNXRUNTIME_VERSION}.tgz
 )
-if(NOT TARGET CUDA::nvToolsExt)
-    add_library(CUDA::nvToolsExt INTERFACE IMPORTED)
-endif()
+FetchContent_MakeAvailable(cxxopts libfzn libminicpp onnxruntime)
 
-set(CMAKE_PREFIX_PATH ${TORCH_CMAKE_PATH})
-find_package(Torch REQUIRED)
+add_library(onnxruntime INTERFACE)
+target_include_directories(onnxruntime INTERFACE ${onnxruntime_SOURCE_DIR}/include)
+target_link_libraries(onnxruntime INTERFACE ${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so)
 
 # Sources
 set(FZN_CONSTR_SRC
@@ -75,7 +69,7 @@ set(FZN_MINICPP_SRC
 )
 
 set(ML_SRC
-        ml/TorchHandler.cpp
+        ml/OnnxHandler.cpp
 )
 
 # Executables
@@ -83,8 +77,8 @@ add_executable(fzn-minicpp main.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_C
 target_link_libraries(fzn-minicpp cxxopts libfzn libminicpp)
 
 add_executable(fzn-minicpp-ml-solver main_ml_solver.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC} ${ML_SRC})
-target_include_directories(fzn-minicpp-ml-solver PRIVATE ml)
-target_link_libraries(fzn-minicpp-ml-solver cxxopts libfzn libminicpp ${TORCH_LIBRARIES})
+target_include_directories(fzn-minicpp-ml-solver PRIVATE ${onnxruntime_SOURCE_DIR}/include ml)
+target_link_libraries(fzn-minicpp-ml-solver cxxopts libfzn libminicpp ${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so)
 
 add_executable(fzn-minicpp-ml-sampler main_ml_sampler.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC})
 target_link_libraries(fzn-minicpp-ml-sampler cxxopts libfzn libminicpp)
