@@ -95,7 +95,7 @@ namespace ML
     void UsFinder(int fIdx, int const nAttempts, std::span<std::string_view const> pasLines, std::string & fzn, std::mutex & outMutex, bool & stop)
     {
         // RNG
-        thread_local std::mt19937 rng{static_cast<std::mt19937::result_type>(idx)};
+        thread_local std::mt19937 rng{static_cast<std::mt19937::result_type>(fIdx)};
 
         // Create Solver
         CPSolver::Ptr solver = Factory::makeSolver();

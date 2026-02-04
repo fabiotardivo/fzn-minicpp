@@ -41,6 +41,10 @@ execute_process(
         OUTPUT_VARIABLE TORCH_CMAKE_PATH
         OUTPUT_STRIP_TRAILING_WHITESPACE
 )
+if(NOT TARGET CUDA::nvToolsExt)
+    add_library(CUDA::nvToolsExt INTERFACE IMPORTED)
+endif()
+
 set(CMAKE_PREFIX_PATH ${TORCH_CMAKE_PATH})
 find_package(Torch REQUIRED)
 
