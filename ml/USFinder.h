@@ -28,32 +28,43 @@ namespace ML
     }
 
     inline
-    std::vector<float> strToRecord(std::string_view const & line)
+    std::vector<int> strToRecord(std::string_view line)
     {
-        std::vector<float> record;
+        std::vector<int> record;
         record.reserve(std::count(line.begin(), line.end(), ',') + 1);
 
-        auto pos = 0;
+        size_t pos = 0;
         while (pos < line.size())
         {
-            auto const nextComma = line.find(',', pos);
-            auto const end = (nextComma == std::string_view::npos) ? line.size() : nextComma;
-            record.push_back(strToFloat(line.substr(pos, end - pos)));
+            size_t nextComma = line.find(',', pos);
+            size_t end = (nextComma == std::string_view::npos) ? line.size() : nextComma;
+
+            // Extract substring
+            std::string_view token = line.substr(pos, end - pos);
+
+            // Handle empty token (UNASSIGNED_VALUE variable)
+            if (token.empty())
+            {
+                record.push_back(UNASSIGNED_VALUE);
+            } else
+            {
+                // Parse integer
+                int value;
+                auto result = std::from_chars(token.data(), token.data() + token.size(), value);
+                if (result.ec == std::errc()) {
+                    record.push_back(value);
+                } else {
+                    throw std::invalid_argument("Invalid integer: " + std::string(token));
+                }
+            }
+
             pos = (nextComma == std::string_view::npos) ? line.size() : nextComma + 1;
         }
         return record;
     }
 
-    inline
-    void saveInRecord(std::span<float> const & pa, std::vector<float> const & us, std::vector<float> & record)
-    {
-        assert(record.size() == pa.size() + us.size());
-        std::copy(pa.begin(), pa.end(), record.begin());
-        std::copy(us.begin(), us.end(), record.begin() + pa.size());
-    }
-
     template<typename Var>
-    bool testConsistency(CPSolver::Ptr const & solver, std::vector<Var> const & vars, std::vector<float> const & ipa)
+    bool testConsistency(CPSolver::Ptr const & solver, std::vector<Var> const & vars, std::vector<int> const & ipa)
     {
         const auto sm = solver->getStateManager();
         bool isConsistent = true;
@@ -61,12 +72,13 @@ namespace ML
         TRYFAIL
             for (auto vIdx = 0; vIdx < ipa.size(); vIdx += 1)
             {
-                float const val = ipa[vIdx];
-                if (not std::isnan(val))
+                int const val = ipa[vIdx];
+                if (val != UNASSIGNED_VALUE)
                 {
-                    vars[vIdx]->assign(static_cast<int>(val));
+                    vars[vIdx]->assign(val);
                 }
             }
+            solver->fixpoint();
         ONFAIL
             isConsistent = false;
         ENDFAIL
@@ -76,47 +88,64 @@ namespace ML
     }
 
     inline
-    std::vector<float> calcUS(CPSolver::Ptr const & solver, std::vector<var<int>::Ptr> const & vars, std::mt19937 & rng, int const nAttempts, std::span<float> const & ipa)
+    std::vector<int> calcUS(CPSolver::Ptr const & solver, std::vector<var<int>::Ptr> const & vars, std::mt19937 & rng, int const nAttempts, std::span<int> const & ipa)
     {
             // Initialize US
             int const nVars = static_cast<int>(ipa.size());
             int bestSize = 0;
-            std::vector<float> bestUS(nVars, 0.0);
+            std::vector<int> bestUS(nVars, UNASSIGNED_VALUE);
             for (auto vIdx = 0; vIdx < nVars; vIdx += 1)
             {
-                bool const isAssigned = std::isnan(ipa[vIdx]);
-                bestUS.push_back(isAssigned);
-                bestSize += isAssigned;
+                bool const isAssigned = ipa[vIdx] != UNASSIGNED_VALUE;
+                if (isAssigned)
+                {
+                    bestUS[vIdx] = 1;
+                    bestSize += 1;
+                }
             }
 
-            std::vector<float> candidateUS(nVars, 0.0);
+            std::vector<int> candidateUS(nVars, UNASSIGNED_VALUE);
             std::vector<int> evalOrder(nVars,0);
             std::iota(evalOrder.begin(), evalOrder.end(), 0);
             for (auto aIdx = 0; aIdx < nAttempts; aIdx += 1)
             {
-                std::ranges::shuffle(evalOrder, rng);
+                //std::cout << "ORIGINAL  ";
+                //PARecord::printPA(ipa, std::cout);
+                //std::cout << std::endl;
+
+                std::vector<int> candidatePA(ipa.begin(), ipa.end());
                 int candidateSize = 0;
-                std::ranges::fill(candidateUS, 0.0);
-                std::vector<float> candidatePA(ipa.begin(), ipa.end());
+                std::ranges::fill(candidateUS, UNASSIGNED_VALUE);
+                std::ranges::shuffle(evalOrder, rng);
                 for (auto const & vIdx : evalOrder)
                 {
-                    if (not std::isnan(candidatePA[vIdx]))
+                    if (candidatePA[vIdx] != UNASSIGNED_VALUE)
                     {
                         auto const val = candidatePA[vIdx];
-                        candidatePA[vIdx] = NAN;
+                        candidatePA[vIdx] = UNASSIGNED_VALUE;
+
+                        //std::cout << "CANDIDATE ";
+                        //PARecord::printPA(candidatePA, std::cout);
                         bool const isConsistent = testConsistency(solver, vars, candidatePA);
-                        if (not isConsistent)
+                        //std::cout << " | CONS = " << isConsistent << std::endl;
+
+                        candidateUS[vIdx] = isConsistent;
+                        if (isConsistent)
                         {
                             candidatePA[vIdx] = val;
-                            candidateUS[vIdx] = 1.0;
                             candidateSize += 1;
                         }
                     }
                 }
+                assert(0 < candidateSize);
                 if (candidateSize < bestSize)
                 {
                     bestSize = candidateSize;
                     bestUS = candidateUS;
+
+                    // std::cout << "BETTER ";
+                    // PARecord::printPA(candidatePA, std::cout);
+                    // std::cout << std::endl;
                 }
             }
         return bestUS;
@@ -157,10 +186,10 @@ namespace ML
         FznSearchHelper searchHelper(solver, varsHelper);
         DFSearch search(solver, searchHelper.getSampleStrategy(fznModel));
         auto const intDecVars = searchHelper.getIntDecisionalVars(fznModel);
-        auto const nIntDecVars = intDecVars.size();
+        auto const nIntDecVars = static_cast<int>(intDecVars.size());
 
         // First thread write the bounds
-        int const recordSize = static_cast<int>(nIntDecVars) * 2; // PA + US
+        int const recordSize = nIntDecVars * 2; // PA + US
         if (fIdx == 0)
         {
             writeBounds(intDecVars, recordSize, outFile);
@@ -171,15 +200,27 @@ namespace ML
         constexpr static int BufferSize = 100;
         RecordsBuffer buffer(BufferSize, recordSize);
         USRecord usRecord(recordSize, 0.0);
+
+        // Finding
         for (auto lIdx = 0; lIdx < pasLines.size() and (not stop); lIdx += 1)
         {
             PARecord paRecord(strToRecord(pasLines[lIdx]));
-            std::vector<float> us(nIntDecVars, 0.0);
+
+            std::vector<int> us(nIntDecVars, UNASSIGNED_VALUE);
+            auto const pa = paRecord.getPA();
+            for (auto vIdx = 0; vIdx < pa.size(); vIdx += 1)
+            {
+                us[vIdx] = pa[vIdx] == UNASSIGNED_VALUE ? UNASSIGNED_VALUE : 0;
+            }
             if (not paRecord.isConsistent())
             {
                 us = calcUS(solver, intDecVars, rng, nAttempts,paRecord.getPA());
             }
             usRecord.from(paRecord.getPA(),us);
+
+            // paRecord.print(std::cout);
+            // usRecord.print(std::cout);
+
             buffer.safeAdd(usRecord, outMutex, outFile);
         }
         buffer.dump(outMutex,outFile);

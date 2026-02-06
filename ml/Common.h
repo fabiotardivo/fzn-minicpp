@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <ranges>
 
+static constexpr int UNASSIGNED_VALUE = INT_MIN;
+
 inline
 std::ofstream openFile(std::string const & filePath)
 {
@@ -51,20 +53,41 @@ void writeBounds(std::vector<Var> const & vars, int const recordSize, std::ostre
         outFile << ",";
     }
     outFile << std::endl;
+    std::flush(outFile);
 }
 
+inline
+void printInt(int const x, std::ostream & outStream)
+{
+    if (x != UNASSIGNED_VALUE)
+    {
+        outStream << x;
+    }
+}
 
-class PARecord : public std::vector<float>
+inline
+void printInts(std::span<int> const s, std::ostream & outStream)
+{
+    int const size = static_cast<int>(s.size());
+    printInt(s[0], outStream);
+    for (auto vIdx = 1; vIdx < size; vIdx += 1)
+    {
+        outStream << ",";
+        printInt(s[vIdx], outStream);
+    }
+}
+
+class PARecord : public std::vector<int>
 {
     public:
         explicit
-        PARecord(std::vector<float> const & record) : std::vector<float>(record){}
-        PARecord(int size, float value) : std::vector<float>(size, value){}
+        PARecord(std::vector<int> const & record) : std::vector<int>(record){}
+        PARecord(int size, int value) : std::vector<int>(size, value){}
 
-        std::span<float> getPA()
+        std::span<int> getPA()
         {
             assert(size() > 2);
-            return std::span<float>(data(), size() -1);
+            return std::span<int>(data(), size() -1);
         }
 
         bool isConsistent() const
@@ -77,33 +100,50 @@ class PARecord : public std::vector<float>
         void from(std::vector<Var> const & pa, bool const isConsistent)
         {
             assert(size() == pa.size() + 1);
-            std::copy(pa.begin(), pa.end(), begin());
-            back() = static_cast<float>(isConsistent);
+            for(auto vIdx = 0; vIdx < pa.size(); vIdx += 1)
+            {
+                at(vIdx) = pa[vIdx]->isBound() ? pa[vIdx]->min() : UNASSIGNED_VALUE;
+            }
+            back() = static_cast<int>(isConsistent);
+        }
+
+        static
+        void printPA(std::span<int> const & pa, std::ostream & outStream)
+        {
+            outStream << "PA = ";
+            printInts(pa, outStream);
+        }
+
+        void print(std::ostream & outStream)
+        {
+            printPA(getPA(), outStream);
+            outStream << " | ";
+            outStream << "CONS = " << isConsistent() << std::endl;
         }
 
         int countAssignedVars()
         {
             assert(size() > 1);
-            int const result = static_cast<int>(std::ranges::count_if(getPA(), [](float const & x){return not std::isnan(x);}));
+            int const result = static_cast<int>(std::ranges::count_if(getPA(), [](int const & x){return x != UNASSIGNED_VALUE;}));
             return result;
         }
 };
 
-class USRecord : public std::vector<float>
+class USRecord : public std::vector<int>
 {
     public:
         explicit
-        USRecord(std::vector<float> const & record) : std::vector<float>(record){}
-        USRecord(int size, float value) : std::vector<float>(size, value){}
+        USRecord(std::vector<int> const & record) : std::vector<int>(record){}
+        USRecord(int size, int value) : std::vector<int>(size, value){}
 
-        std::span<float> getPA()
+        std::span<int> getPA()
         {
             assert(size() > 1);
             assert(size() % 2 == 0);
             return {data(), size() / 2};
         }
 
-        std::span<float> getUS()
+        std::span<int> getUS()
         {
             assert(size() > 1);
             assert(size() % 2 == 0);
@@ -111,24 +151,46 @@ class USRecord : public std::vector<float>
             return {data() + halfSize, halfSize};
         }
 
-        void from(std::span<float> const & pa, std::vector<float> const & us)
+        void from(std::span<int> const & pa, std::vector<int> const & us)
         {
             assert(size() == pa.size() + us.size());
-            std::copy(pa.begin(), pa.end(), begin());
-            std::copy(us.begin(), us.end(), begin() + pa.size());
+            std::memcpy(data(), pa.data(), pa.size() * sizeof(int));
+            std::memcpy(data() + pa.size(), us.data(), us.size() * sizeof(int));
+        }
+
+        static
+        void printPA(std::span<int> const & pa, std::ostream & outStream)
+        {
+            outStream << "PA = ";
+            printInts(pa, outStream);
+        }
+
+        static
+        void printUS(std::span<int> const & us, std::ostream & outStream)
+        {
+            outStream << "US = ";
+            printInts(us, outStream);
+        }
+
+        void print(std::ostream & outStream)
+        {
+            printPA(getPA(), outStream);
+            outStream << " | ";
+            printUS(getUS(), outStream);
+            outStream << std::endl;
         }
 };
 
 class RecordsBuffer
 {
-        float * const buffer;
+        int * const buffer;
         int const capacity;
         int const recordSize;
         int size;
 
     public:
         RecordsBuffer(int const capacity, int const recordSize) :
-            buffer(new float[capacity * recordSize]),
+            buffer(new int[capacity * recordSize]),
             capacity(capacity),
             recordSize(recordSize),
             size(0) {}
@@ -136,20 +198,11 @@ class RecordsBuffer
         ~RecordsBuffer() { delete[] buffer; }
 
     private:
-        std::span<float> getRecord(int const rIdx) const
+        std::span<int> getRecord(int const rIdx) const
         {
             assert(rIdx <= size); // Include append case
-            std::span<float> record(buffer + (rIdx * recordSize), recordSize);
+            std::span<int> record(buffer + (rIdx * recordSize), recordSize);
             return record;
-        }
-
-        static
-        void dump(float const x, std::ostream & outStream)
-        {
-            if (not std::isnan(x))
-            {
-                outStream << static_cast<int>(x);
-            }
         }
 
         void dump(std::ostream & outStream)
@@ -157,14 +210,11 @@ class RecordsBuffer
             for (auto rIdx = 0; rIdx < size; rIdx += 1)
             {
                 auto const & record = getRecord(rIdx);
-                dump(record[0], outStream);
-                for(auto i = 1; i < recordSize; i += 1)
-                {
-                    outStream << ",";
-                    dump(record[i], outStream);
-                }
+                printInts(record, outStream);
                 outStream << std::endl;
             }
+            std::flush(outStream);
+            size = 0;
         }
 
         bool isFull() const
@@ -173,7 +223,7 @@ class RecordsBuffer
         }
 
     public:
-        void add(std::vector<float> const & record)
+        void add(std::vector<int> const & record)
         {
             assert(not isFull());
             assert(record.size() == recordSize);
@@ -188,7 +238,7 @@ class RecordsBuffer
             std::flush(outStream);
         }
 
-        void safeAdd(std::vector<float> const & record, std::mutex & outMutex, std::ostream & outStream)
+        void safeAdd(std::vector<int> const & record, std::mutex & outMutex, std::ostream & outStream)
         {
             if (isFull())
             {

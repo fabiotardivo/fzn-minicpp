@@ -23,6 +23,20 @@ std::string readFile(std::string const & fPath) {
     return data;
 }
 
+std::string_view getNextLine(std::string_view& sv) {
+
+    std::string_view line;
+
+    if (not sv.empty())
+    {
+        auto pos = sv.find('\n');
+        line = (pos == std::string_view::npos) ? sv: sv.substr(0, pos);
+        sv.remove_prefix(pos == std::string_view::npos ? sv.size() : pos + 1);
+    }
+
+    return line;
+}
+
 int main(int argc, char * argv[])
 {
     using namespace std;
@@ -30,9 +44,9 @@ int main(int argc, char * argv[])
     // Parse options
     int timeout = std::numeric_limits<int>::max();
     int nFinders = std::thread::hardware_concurrency();
-    int nAttempts = 3;
+    int nAttempts = 2;
     std::string fzn;
-    std::string pasPath;
+    std::string paPath;
     std::string outPath;
     cxxopts::Options optsParser("fzn-minicpp", "A C++ MiniZinc solver based on MiniCP.");
     optsParser.custom_help("[Options]");
@@ -40,7 +54,7 @@ int main(int argc, char * argv[])
     optsParser.add_options()
         ("t,timeout", "Stop search after <t> s", cxxopts::value(timeout))
         ("f,finders", "Number of finders", cxxopts::value(nFinders))
-        ("pas", "Partial assignments file path", cxxopts::value(pasPath))
+        ("pa", "Partial assignments file path", cxxopts::value(paPath))
         ("o,output", "Output file path", cxxopts::value(outPath))
         ("a,attempts", "Attempts to find MUS ", cxxopts::value(nAttempts))
         ("fzn", "FlatZinc", cxxopts::value(fzn))
@@ -49,32 +63,29 @@ int main(int argc, char * argv[])
 
     auto args = optsParser.parse(argc, argv);
 
-    if ((args.count("h") == 0) and (not pasPath.empty()) and (not outPath.empty()) and (not fzn.empty()))
+    if ((args.count("h") == 0) and (not paPath.empty()) and (not outPath.empty()) and (not fzn.empty()))
     {
         // Read partial assignments file
-        std::string pasString = readFile(pasPath);
-        std::istringstream iss(pasString);
+        std::string paString = readFile(paPath);
+        std::string_view paStringView(paString);
 
         // Skip first 2 header lines
-        std::string line;
-        std::getline(iss, line);
-        std::getline(iss, line);
+        getNextLine(paStringView);
+        getNextLine(paStringView);
 
         // Build a vector of lines
-        std::vector<std::string_view> pasLines;
-        while (std::getline(iss, line))
+        std::vector<std::string_view> paLines;
+        while (not paStringView.empty())
         {
-            if (!line.empty())
+            std::string_view line = getNextLine(paStringView);
+            if (not line.empty())
             {
-                // Create a view from the position in the original string
-                auto const start = line.data() - pasString.data();
-                auto const len = line.size();
-                pasLines.emplace_back(pasString.data() + start, len);
+                paLines.emplace_back(line);
             }
         }
 
-        if (pasLines.empty()) throw std::runtime_error("No partial assignments");
-        if (pasLines.size() % 2 != 0) throw std::runtime_error("Odd number of partial assignments");
+        if (paLines.empty()) throw std::runtime_error("No partial assignments");
+        if (paLines.size() % 2 != 0) throw std::runtime_error("Odd number of partial assignments");
 
         // Launch finders
         bool stop = false;
@@ -82,16 +93,13 @@ int main(int argc, char * argv[])
         std::mutex outMutex;
         std::vector<std::thread> fThreads;
         fThreads.reserve(nFinders);
-        int const pairsPerThread = (pasLines.size() / 2 + nFinders - 1) / nFinders;
+        int const pairsPerThread = (paLines.size() / 2 + nFinders - 1) / nFinders;
         int const linesPerThread = pairsPerThread * 2;
         for (auto fIdx = 0; fIdx < nFinders; fIdx += 1)
         {
             int const start = fIdx * linesPerThread;
-            int const end = std::min(start + linesPerThread, static_cast<int>(pasLines.size()));
-            std::span<std::string_view const> fLines(
-                pasLines.begin() + start,
-                pasLines.begin() + end
-            );
+            int const end = std::min(start + linesPerThread, static_cast<int>(paLines.size()));
+            std::span<std::string_view const> fLines(paLines.begin() + start,paLines.begin() + end);
 
             fThreads.emplace_back(ML::USFinder,
                                     fIdx,
