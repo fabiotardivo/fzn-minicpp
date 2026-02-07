@@ -87,7 +87,7 @@ int main(int argc, char * argv[])
             auto [min_idx, max_idx, min_score, max_score, mean] = stats;
 
             fmt::print(
-                "Var {} | Info {:.2f} {:.2f} {:.2f} | Scores = [{}]\n",
+                "Var {} | Info {:.2f} {:.2f} {:.2f} | Scores = {:.2f}\n",
                 varIdx, min_score, max_score, mean, fmt::join(mlScores, ", ")
             );
 
