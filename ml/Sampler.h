@@ -57,8 +57,8 @@ namespace ML
         // Buffering
         constexpr static int BufferSize = 100;
         RecordsBuffer buffer(BufferSize, recordSize);
-        PARecord cpaRecord(recordSize, NAN);
-        PARecord ipaRecord(recordSize, NAN);
+        PARecord cpaRecord(recordSize, UNASSIGNED_VALUE);
+        PARecord ipaRecord(recordSize, UNASSIGNED_VALUE);
 
         // Collect partial assignments
         search.onBranch([&]()
