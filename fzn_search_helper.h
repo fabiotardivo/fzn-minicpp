@@ -134,7 +134,7 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                                 bestScore = score;
                                 bestVal = val;
                                 bestVar = var;
-                                //printf("New best score %5.3f for var[%3d] = %3d\n", bestScore, varIdx, val);
+                                printf("New best score %5.3f for var[%3d] = %3d\n", bestScore, varIdx, val);
                             }
                         }
                     }

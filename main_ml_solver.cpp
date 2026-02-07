@@ -78,6 +78,13 @@ int main(int argc, char * argv[])
         {
             mlPa = ML::getPartialAssignment(vars);
             auto [mlVals, mlScores] = infer.scoreAllValuesForVar(mlPa, varIdx, vars[varIdx]);
+             std::cout << "var[" << varIdx << "] = ";
+             std::cout <<  mlScores[0];
+            for (unsigned int i = 1; i < mlVals.size(); i++)
+            {
+                std::cout << mlVals[i] << std::endl;
+            }
+            std::cout << std::endl;
 
             auto result = ML::getScoreVal(mlVals, mlScores, rankType);
             return result;
