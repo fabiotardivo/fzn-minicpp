@@ -20,16 +20,11 @@ public:
     opts_.SetIntraOpNumThreads(1);
     opts_.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
 
-#ifdef USE_CUDA
     if (useCuda) {
       OrtCUDAProviderOptions cuda_opts;
       std::memset(&cuda_opts, 0, sizeof(cuda_opts));
       opts_.AppendExecutionProvider_CUDA(cuda_opts);
     }
-#else
-    (void)useCuda;
-#endif
-
     session_ = Ort::Session(env_, onnxPath.c_str(), opts_);
 
     // Cache names (owned by allocator). Copy into std::string for safety.
