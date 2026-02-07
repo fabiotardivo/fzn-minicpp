@@ -176,9 +176,9 @@ namespace ML
                 score = -mean;
                 break;
             default:
-                throw std::runtime_error("Invalid rank.");
+                throw std::runtime_error("Invalid varioable rank.");
         };
-        switch (varRank)
+        switch (valRank)
         {
         case BEST:
             idx = min_idx;
@@ -187,7 +187,7 @@ namespace ML
             idx = max_idx;
             break;
         default:
-            throw std::runtime_error("Invalid rank.");
+            throw std::runtime_error("Invalid value rank.");
         };
         return {score,idx};
 
