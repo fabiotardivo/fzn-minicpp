@@ -79,11 +79,11 @@ int main(int argc, char * argv[])
             mlPa = ML::getPartialAssignment(vars);
             auto [mlVals, mlScores] = infer.scoreAllValuesForVar(mlPa, varIdx, vars[varIdx]);
              std::cout << "var[" << varIdx << "] = ";
-             std::cout <<  mlScores[0];
+             printf("%.2f",mlScores[0]);
             for (unsigned int i = 1; i < mlScores.size(); i++)
             {
                 std::cout << ", ";
-                std::cout << mlScores[i];
+                printf("%.2f",mlScores[i]);
             }
             std::cout << std::endl;
 
