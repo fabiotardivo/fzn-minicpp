@@ -13,6 +13,9 @@
 #include <ml/utils.h>
 #include <sstream>
 
+#include <fmt/format.h>
+#include <fmt/ranges.h>
+
 int main(int argc, char * argv[])
 {
     using namespace std;
@@ -20,8 +23,8 @@ int main(int argc, char * argv[])
     // Parse options
     std::string fzn;
     std::string model;
-    std::string rank = "worst";
-    int lookahead = 0;
+    std::string varRankStr = "worst";
+    std::string valRankStr = "worst";
 
     cxxopts::Options optsParser("fzn-minicpp-ml", "A C++ MiniZinc solver based on MiniCP.");
     optsParser.custom_help("[Options]");
@@ -32,9 +35,9 @@ int main(int argc, char * argv[])
         ("s", "Print search statistics", cxxopts::value<bool>())
         ("t", "Stop search after <t> ms", cxxopts::value<unsigned int>())
         ("model", "Machine learning model in ONNX format", cxxopts::value<std::string>(model))
-        ("rank", "Criteria to rank scores: best, avg, worst (Default = worst)", cxxopts::value<std::string>(rank))
-        ("lookahead", "Lookahead depth (Default = 0)", cxxopts::value<int>(lookahead))
-        ("fzn", "FlatZinc", cxxopts::value<std::string>(fzn))
+        ("var-rank", "Criteria to rank variables: best, avg, worst (Default = worst)", cxxopts::value<std::string>(varRankStr))
+        ("val-rank", "Criteria to rank values: best, worst (Default = worst)", cxxopts::value<std::string>(valRankStr))
+         ("fzn", "FlatZinc", cxxopts::value<std::string>(fzn))
         ("h,help", "Print usage");
     optsParser.parse_positional({"fzn"});
 
@@ -67,29 +70,32 @@ int main(int argc, char * argv[])
         FznSearchHelper searchHelper(solver, varsHelper);
 
         // Load ML evaluator with PyTorch
-        ML::RankType rankType = ML::rankFromString(rank);
+        ML::RankType varRank = ML::rankFromString(varRankStr);
+        ML::RankType valRank = ML::rankFromString(valRankStr);
         BatchedOnnxInfer infer(model, /*useCuda=*/false);
         std::vector<float> mlScores;
         std::vector<int> mlVals;
         std::vector<int> mlPa;
 
         // Batched ML evaluation function
-        ML::EvalFunctionType eval_fun = [&](int varIdx, ML::IntVars const & vars)
+        ML::EvalFunctionType eval_fun = [&](int varIdx, ML::IntVars const& vars)
         {
             mlPa = ML::getPartialAssignment(vars);
             auto [mlVals, mlScores] = infer.scoreAllValuesForVar(mlPa, varIdx, vars[varIdx]);
-             std::cout << "var[" << varIdx << "] = ";
-             std::cout <<  (0.5 <= mlScores[0]);
-            for (unsigned int i = 1; i < mlScores.size(); i++)
-            {
-                std::cout << ", ";
-                std::cout << (0.5f <= mlVals[i]);
-            }
-            std::cout << std::endl;
+            auto stats = ML::getStats(mlScores);
 
-            auto result = ML::getScoreVal(mlVals, mlScores, rankType);
-            return result;
+            auto [min_idx, max_idx, min_score, max_score, mean] = stats;
+
+            fmt::print(
+                "Var {} | Info {:.2f} {:.2f} {:.2f} | Scores = [{}]\n",
+                varIdx, min_score, max_score, mean, fmt::join(mlScores, ", ")
+            );
+
+            auto [score, idx] = ML::getScoreVal(stats, varRank, valRank);
+            return std::make_pair(score, mlVals[idx]);
         };
+
+
 
         DFSearch search(solver, searchHelper.getMLSearchStrategy(fznModel, eval_fun));
         FznStatisticsHelper::hookToSearch(stats, search);

@@ -119,57 +119,72 @@ namespace ML
     }
 
     inline
-    std::tuple<int,float,float,float> getStats(std::vector<float> const & vals)
+    std::tuple<int,int,float,float,float> getStats(std::vector<float> const & scores)
     {
 
         int min_idx = 0;
-        float min_val = vals[0];
-        float max_val = vals[0];
+        int max_idx = 0;
+        float min_score = scores[0];
+        float max_score = scores[0];
         float mean = 0.0f;
 
         int n = 0;
         int i = 0;
 
-        for (float x : vals)
+        for (float x : scores)
         {
             ++n;
             mean += (x - mean) / n;  // incremental mean
 
-            if (x < min_val)
+            if (x < min_score)
             {
-                min_val = x;
+                min_score = x;
                 min_idx = i;
             }
-            if (x > max_val)
-                max_val = x;
+            if (x > max_score)
+            {
+                max_score = x;
+                max_idx = i;
+            }
 
             ++i;
         }
 
-        return {min_idx, min_val, max_val, mean};
+        return {min_idx, max_idx, min_score, max_score, mean};
     }
 
     inline
-    EvalResultType getScoreVal(std::vector<int> const & values, std::vector<float> const & scores, RankType rankType)
+    EvalResultType getScoreVal(std::tuple<int,int,float,float,float> const & stats, RankType varRank, RankType valRank)
     {
-        auto [min_idx, min_val, max_val, mean] = getStats(scores);
+        auto [min_idx, max_idx, min_score, max_score, mean] = stats;
         float score = std::numeric_limits<float>::max();
-        switch (rankType)
+        int idx = std::numeric_limits<int>::max();
+        switch (varRank)
         {
             case BEST:
-                score = min_val;
+                score = min_score;
                 break;
             case AVG:
                 score = mean;
                 break;
             case WORST:
-                score = max_val;
+                score = max_score;
                 break;
             default:
                 throw std::runtime_error("Invalid rank.");
         };
-        int val = values[min_idx];
-        return {score,val};
+        switch (varRank)
+        {
+        case BEST:
+            idx = min_idx;
+            break;
+        case WORST:
+            idx = max_idx;
+            break;
+        default:
+            throw std::runtime_error("Invalid rank.");
+        };
+        return {score,idx};
 
     }
 }
