@@ -35,8 +35,8 @@ int main(int argc, char * argv[])
         ("s", "Print search statistics", cxxopts::value<bool>())
         ("t", "Stop search after <t> ms", cxxopts::value<unsigned int>())
         ("model", "Machine learning model in ONNX format", cxxopts::value<std::string>(model))
-        ("var-rank", "Criteria to rank variables: best, avg, worst (Default = worst)", cxxopts::value<std::string>(varRankStr))
-        ("val-rank", "Criteria to rank values: best, worst (Default = worst)", cxxopts::value<std::string>(valRankStr))
+        ("var-rank", "Criteria to rank variables: best, worst, bestAvg, worstAvg (Default = worstAvg)", cxxopts::value<std::string>(varRankStr))
+        ("val-rank", "Criteria to rank values: best, worst, bestAvg, worstAvg (Default = worst)", cxxopts::value<std::string>(valRankStr))
          ("fzn", "FlatZinc", cxxopts::value<std::string>(fzn))
         ("h,help", "Print usage");
     optsParser.parse_positional({"fzn"});

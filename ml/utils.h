@@ -20,18 +20,20 @@ namespace ML
     enum RankType
     {
         BEST,
-        AVG,
-        WORST
+        WORST,
+        BEST_AVG,
+        WORST_AVG
     };
 
     inline
     RankType rankFromString(std::string const & s)
     {
-        static const std::unordered_map<std::string, RankType> map
+        static constexpr std::unordered_map<std::string, RankType> map
                 {
                         {"best", RankType::BEST},
-                        {"avg", RankType::AVG},
-                        {"worst", RankType::WORST}
+                        {"worst", RankType::WORST},
+                        {"bestAvg", RankType::BEST_AVG},
+                        {"worstAvg", RankType::WORST_AVG}
                 };
 
         auto it = map.find(s);
@@ -164,11 +166,14 @@ namespace ML
             case BEST:
                 score = min_score;
                 break;
-            case AVG:
-                score = mean;
-                break;
             case WORST:
                 score = max_score;
+                break;
+            case BEST_AVG:
+                score = mean;
+                break;
+            case WORST_AVG:
+                score = -mean;
                 break;
             default:
                 throw std::runtime_error("Invalid rank.");
