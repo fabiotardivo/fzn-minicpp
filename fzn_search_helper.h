@@ -131,7 +131,9 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                         auto const &var = array_int_var[varIdx];
                         if (not var->isBound()) {
                             auto [score, unc, val] = eval_fun(varIdx, array_int_var);
-                            if (score < bestScore or score == bestScore and var->size() < bestVar->size()) {
+                            bool const smallerDomain = bestVar != nullptr ? var->size() < bestVar->size(): true;
+                            if (score < bestScore or score == bestScore and smallerDomain)
+                            {
                                 bestScore = score;
                                 bestVal = val;
                                 bestVar = var;
@@ -140,7 +142,7 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                             }
                         }
                     }
-                    if (uncBest < 0.3)
+                    if (uncBest < 0.3 and bestVar != nullptr)
                     {
                         return indomain_fixed(array_int_var[0]->getSolver(), bestVar, bestVal);
                     }
@@ -150,7 +152,7 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                     }
                 };
 
-                return  ml_search_strategy();
+                return  ml_search_strategy;
             }
             else
             {
