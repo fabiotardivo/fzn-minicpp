@@ -1,4 +1,4 @@
-#include <ml/TorchHandler.h>
+#include <ml/OnnxHandler.h>
 #include <Parser.h>
 #include <Printer.h>
 #include <solver.hpp>
@@ -22,7 +22,6 @@ int main(int argc, char * argv[])
     std::string model;
     std::string rank = "worst";
     int lookahead = 0;
-    int batchSize = 32;  // Batch size for inference
 
     cxxopts::Options optsParser("fzn-minicpp-ml", "A C++ MiniZinc solver based on MiniCP.");
     optsParser.custom_help("[Options]");
@@ -32,10 +31,9 @@ int main(int argc, char * argv[])
         ("n", "Stop search after <n> solutions", cxxopts::value<unsigned int>())
         ("s", "Print search statistics", cxxopts::value<bool>())
         ("t", "Stop search after <t> ms", cxxopts::value<unsigned int>())
-        ("model", "Machine learning model in TorchScript format (.pt)", cxxopts::value<std::string>(model))
+        ("model", "Machine learning model in ONNX format", cxxopts::value<std::string>(model))
         ("rank", "Criteria to rank scores: best, avg, worst (Default = worst)", cxxopts::value<std::string>(rank))
         ("lookahead", "Lookahead depth (Default = 0)", cxxopts::value<int>(lookahead))
-        ("batch-size", "Batch size for ML inference (Default = 32)", cxxopts::value<int>(batchSize))
         ("fzn", "FlatZinc", cxxopts::value<std::string>(fzn))
         ("h,help", "Print usage");
     optsParser.parse_positional({"fzn"});
@@ -70,47 +68,18 @@ int main(int argc, char * argv[])
 
         // Load ML evaluator with PyTorch
         ML::RankType rankType = ML::rankFromString(rank);
-        TorchHandler::getInstance(model).setVerbose(true);
-
-        // Update batch size if provided
-        if (args["batch-size"].count() != 0)
-        {
-            batchSize = args["batch-size"].as<int>();
-        }
+        BatchedOnnxInfer infer("output_grouped/model.onnx", /*useCuda=*/false);
+        std::vector<float> mlScores;
+        std::vector<int> mlVals;
+        std::vector<int> mlPa;
 
         // Batched ML evaluation function
         ML::EvalFunctionType eval_fun = [&](int varIdx, ML::IntVars const & vars)
         {
-            auto const & base_pa = ML::getPartialAssignment(vars);
-            auto const & base_pas = ML::getAllPartialAssignments(varIdx, vars, base_pa);
-            auto const & pas = ML::getLookahead(lookahead, vars, base_pas);
+            mlPa = ML::getPartialAssignment(vars);
+            auto [mlVals, mlScores] = infer.scoreAllValuesForVar(mlPa, varIdx, vars[varIdx]);
 
-            // Convert list to vector for batching (if pas is a list)
-            std::vector<std::vector<float>> pasVec(pas.begin(), pas.end());
-
-            std::vector<float> scores;
-            scores.reserve(pasVec.size());
-
-            // Batch inference
-            if (pasVec.size() <= static_cast<size_t>(batchSize))
-            {
-                // Single batch - process all at once
-                scores = TorchHandler::getInstance(model).runInferenceBatch(pasVec);
-            }
-            else
-            {
-                // Multiple batches - process in chunks
-                for (size_t i = 0; i < pasVec.size(); i += batchSize)
-                {
-                    size_t end = std::min(i + batchSize, pasVec.size());
-                    std::vector<std::vector<float>> batch(pasVec.begin() + i, pasVec.begin() + end);
-
-                    auto batchScores = TorchHandler::getInstance(model).runInferenceBatch(batch);
-                    scores.insert(scores.end(), batchScores.begin(), batchScores.end());
-                }
-            }
-
-            auto result = ML::getScoreVal(varIdx, pas, scores, rankType);
+            auto result = ML::getScoreVal(mlVals, mlScores, rankType);
             return result;
         };
 

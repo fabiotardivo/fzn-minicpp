@@ -6,6 +6,8 @@
 #include <stdexcept>
 #include <ranges>
 
+#include "Common.h"
+
 namespace ML
 {
 
@@ -48,12 +50,12 @@ namespace ML
     }
 
     inline
-    std::vector<float> getPartialAssignment(IntVars const & vars)
+    std::vector<int> getPartialAssignment(IntVars const & vars)
     {
-        std::vector<float> result = {};
+        std::vector<int> result = {};
         for(auto const & var : vars)
         {
-            result.push_back(var->isBound() ? var->min() : NAN);
+            result.push_back(var->isBound() ? var->min() : UNASSIGNED_VALUE);
         }
         return result;
     }
@@ -148,7 +150,7 @@ namespace ML
     }
 
     inline
-    EvalResultType getScoreVal(int varIdx, std::list<PAType> const & pas, std::vector<float> const & scores, RankType rankType)
+    EvalResultType getScoreVal(std::vector<int> const & values, std::vector<float> const & scores, RankType rankType)
     {
         auto [min_idx, min_val, max_val, mean] = getStats(scores);
         float score = std::numeric_limits<float>::max();
@@ -166,7 +168,7 @@ namespace ML
             default:
                 throw std::runtime_error("Invalid rank.");
         };
-        int val = static_cast<int>(std::next(pas.begin(), min_idx)->at(varIdx));
+        int val = values[min_idx];
         return {score,val};
 
     }

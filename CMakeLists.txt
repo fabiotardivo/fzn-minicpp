@@ -68,9 +68,6 @@ set(FZN_MINICPP_SRC
         fzn_variables_helper.cpp
 )
 
-set(ML_SRC
-        ml/OnnxHandler.cpp
-)
 
 # Executables
 add_executable(fzn-minicpp main.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC})
