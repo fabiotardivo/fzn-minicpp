@@ -68,7 +68,7 @@ int main(int argc, char * argv[])
 
         // Load ML evaluator with PyTorch
         ML::RankType rankType = ML::rankFromString(rank);
-        BatchedOnnxInfer infer("output_grouped/model.onnx", /*useCuda=*/false);
+        BatchedOnnxInfer infer(model, /*useCuda=*/false);
         std::vector<float> mlScores;
         std::vector<int> mlVals;
         std::vector<int> mlPa;
