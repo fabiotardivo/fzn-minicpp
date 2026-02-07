@@ -75,17 +75,11 @@ public:
 
     // Option A: bounded [min..max] with holes (contains)
     // Works even if domain is sparse, but costs O(range).
-    if (var->isBound()) {
       const int lo = var->min();
       const int hi = var->max();
       for (int v = lo; v <= hi; ++v) {
         if (var->contains(v)) domainVals.push_back(static_cast<int32_t>(v));
       }
-    } else {
-      // If unbounded, you must decide a finite enumeration strategy.
-      // Here we fail fast.
-      throw std::runtime_error("Variable is not bounded. Need a finite domain enumeration strategy.");
-    }
 
     if (static_cast<int>(domainVals.size()) != batch) {
       // If size() disagrees with enumeration, size() might be "dynamic" or contains() costly.
