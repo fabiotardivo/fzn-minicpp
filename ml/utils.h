@@ -28,7 +28,7 @@ namespace ML
     inline
     RankType rankFromString(std::string const & s)
     {
-        static constexpr std::unordered_map<std::string, RankType> map
+        static const std::unordered_map<std::string, RankType> map
                 {
                         {"best", RankType::BEST},
                         {"worst", RankType::WORST},
