@@ -109,11 +109,11 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
         if (holds_alternative<Fzn::basic_search_annotation_t>(search_annotation))
         {
             auto const & basic_search_annotation = get<Fzn::basic_search_annotation_t>(search_annotation);
+            auto search_strategy = makeBasicSearchStrategy(basic_search_annotation);
             auto const & pred_identifier = get<0>(basic_search_annotation);
             auto const & var_expr = get<1>(basic_search_annotation);
-            auto const & annotations = get<2>(basic_search_annotation);
-
-            if (pred_identifier == "int_search") {
+            if (pred_identifier == "int_search")
+            {
                 using int_var_t = var<int>::Ptr;
                 using array_int_var_t = vector<int_var_t>;
 
@@ -121,7 +121,7 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                 array_int_var_t array_int_var = getIntDecisionalVars(var_expr);
                 auto const nVars = static_cast<int>(array_int_var.size());
 
-                return [=]()
+                auto ml_search_strategy = [=]()
                 {
                     int_var_t bestVar = nullptr;
                     auto bestVal = std::numeric_limits<int>::max();;
@@ -138,8 +138,24 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                             }
                         }
                     }
-
                     return indomain_fixed(array_int_var[0]->getSolver(), bestVar, bestVal);
+                };
+
+                return [=]
+                {
+                    int nBoundedVars = 0;
+                    for (auto varIdx = 0; varIdx < nVars; varIdx += 1)
+                    {
+                        nBoundedVars += array_int_var[varIdx]->isBound();
+                    }
+                    if (nBoundedVars < nVars / 2)
+                    {
+                        return search_strategy();
+                    }
+                    else
+                    {
+                        return ml_search_strategy();
+                    }
                 };
             }
             else
@@ -152,6 +168,8 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
             throw std::runtime_error("Unsupported search annotation");
         }
     }
+
+    return {};
 }
 
 
