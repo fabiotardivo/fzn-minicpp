@@ -86,15 +86,15 @@ int main(int argc, char * argv[])
             auto [mlVals, mlScores] = infer.scoreAllValuesForVar(mlPa, varIdx, vars[varIdx]);
             auto stats = ML::getStats(mlScores);
 
-            auto [min_idx, max_idx, min_score, max_score, mean] = stats;
+            auto [min_idx, max_idx, min_score, max_score, mean, eom01] = stats;
 
             // fmt::print(
-            //     "Var {} | Info {:.2f} {:.2f} {:.2f} | Scores = {:.2f}\n",
-            //     varIdx, min_score, max_score, mean, fmt::join(mlScores, ", ")
+            //     "Var {} | Info {:.2f} {:.2f} {:.2f} {:.2f} | Scores = {:.2f}\n",
+            //     varIdx, min_score, max_score, mean, eom01 fmt::join(mlScores, ", ")
             // );
 
-            auto [score, idx] = ML::getScoreVal(stats, varRank, valRank);
-            return std::make_pair(score, mlVals[idx]);
+            auto [score, unc, idx] = ML::getScoreVal(stats, varRank, valRank);
+            return std::make_tuple(score, unc, mlVals[idx]);
         };
 
 

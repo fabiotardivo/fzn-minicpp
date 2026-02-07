@@ -13,7 +13,8 @@ namespace ML
 
     using IntVar = var<int>::Ptr;
     using IntVars = std::vector<IntVar>;
-    using EvalResultType = std::pair<float,int>;
+    using EvalResultType = std::tuple<float,float,int>;
+    using StatsType = std::tuple<int,int,float,float,float,float>;
     using EvalFunctionType = std::function<EvalResultType(int, IntVars const &)>;
     using PAType = std::vector<float>;
 
@@ -120,10 +121,19 @@ namespace ML
         }
     }
 
-    inline
-    std::tuple<int,int,float,float,float> getStats(std::vector<float> const & scores)
+    inline float bernoulli_entropy_01(float p)
     {
+        // Returns in [0,1], where 1 = max uncertainty at p=0.5
+        const float eps = 1e-12f;
+        p = std::clamp(p, eps, 1.0f - eps);
 
+        float h = -(p * std::log(p) + (1.0f - p) * std::log(1.0f - p)); // nats
+        return h / std::log(2.0f); // normalize to [0,1]
+    }
+
+    inline std::tuple<int,int,float,float,float,float>
+    getStats(std::vector<float> const& scores)
+    {
         int min_idx = 0;
         int max_idx = 0;
         float min_score = scores[0];
@@ -138,29 +148,23 @@ namespace ML
             ++n;
             mean += (x - mean) / n;  // incremental mean
 
-            if (x < min_score)
-            {
-                min_score = x;
-                min_idx = i;
-            }
-            if (x > max_score)
-            {
-                max_score = x;
-                max_idx = i;
-            }
+            if (x < min_score) { min_score = x; min_idx = i; }
+            if (x > max_score) { max_score = x; max_idx = i; }
 
             ++i;
         }
 
-        return {min_idx, max_idx, min_score, max_score, mean};
+        float eom = bernoulli_entropy_01(mean);
+        return {min_idx, max_idx, min_score, max_score, mean, eom};
     }
 
     inline
-    EvalResultType getScoreVal(std::tuple<int,int,float,float,float> const & stats, RankType varRank, RankType valRank)
+    EvalResultType getScoreVal(StatsType const & stats, RankType varRank, RankType valRank)
     {
-        auto [min_idx, max_idx, min_score, max_score, mean] = stats;
+        auto [min_idx, max_idx, min_score, max_score, mean, eom01] = stats;
         float score = std::numeric_limits<float>::max();
         int idx = std::numeric_limits<int>::max();
+        float unc = 0;
         switch (varRank)
         {
             case BEST:
@@ -171,9 +175,11 @@ namespace ML
                 break;
             case BEST_AVG:
                 score = mean;
+                unc = eom01;
                 break;
             case WORST_AVG:
                 score = -mean;
+                unc = eom01;
                 break;
             default:
                 throw std::runtime_error("Invalid varioable rank.");
@@ -189,7 +195,7 @@ namespace ML
         default:
             throw std::runtime_error("Invalid value rank.");
         };
-        return {score,idx};
+        return {score, unc, idx};
 
     }
 }
