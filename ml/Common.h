@@ -90,21 +90,21 @@ class PARecord : public std::vector<int>
             return std::span<int>(data(), size() -1);
         }
 
-        bool isConsistent() const
+        bool isInconsistent() const
         {
             assert(size() > 1);
             return static_cast<bool>(back());
         }
 
         template<typename Var>
-        void from(std::vector<Var> const & pa, bool const isConsistent)
+        void from(std::vector<Var> const & pa, bool const isInconsistent)
         {
             assert(size() == pa.size() + 1);
             for(auto vIdx = 0; vIdx < pa.size(); vIdx += 1)
             {
                 at(vIdx) = pa[vIdx]->isBound() ? pa[vIdx]->min() : UNASSIGNED_VALUE;
             }
-            back() = static_cast<int>(isConsistent);
+            back() = static_cast<int>(isInconsistent);
         }
 
         static
@@ -118,7 +118,7 @@ class PARecord : public std::vector<int>
         {
             printPA(getPA(), outStream);
             outStream << " | ";
-            outStream << "CONS = " << isConsistent() << std::endl;
+            outStream << "INC = " << isInconsistent() << std::endl;
         }
 
         int countAssignedVars()

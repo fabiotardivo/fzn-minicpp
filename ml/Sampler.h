@@ -63,12 +63,12 @@ namespace ML
         // Collect partial assignments
         search.onBranch([&]()
         {
-            cpaRecord.from(intDecVars, true);
+            cpaRecord.from(intDecVars, false);
 
         });
         search.onFailure([&]()
         {
-            ipaRecord.from(intDecVars, false);
+            ipaRecord.from(intDecVars, true);
 
             // cpaRecord.print(std::cout);
             // ipaRecord.print(std::cout);

@@ -212,7 +212,7 @@ namespace ML
             {
                 us[vIdx] = pa[vIdx] == UNASSIGNED_VALUE ? UNASSIGNED_VALUE : 0;
             }
-            if (not paRecord.isConsistent())
+            if (paRecord.isInconsistent())
             {
                 us = calcUS(solver, intDecVars, rng, nAttempts,paRecord.getPA());
             }
