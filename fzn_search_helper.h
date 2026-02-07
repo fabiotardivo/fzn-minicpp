@@ -148,7 +148,7 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                     {
                         nBoundedVars += array_int_var[varIdx]->isBound();
                     }
-                    if (nBoundedVars < nVars / 2)
+                    if (nBoundedVars >= 0)
                     {
                         return search_strategy();
                     }
