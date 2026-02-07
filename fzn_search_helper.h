@@ -144,6 +144,7 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                     }
                     if (uncBest < 0.3 and bestVar != nullptr)
                     {
+                        printf("Using ML strategy\n");
                         return indomain_fixed(array_int_var[0]->getSolver(), bestVar, bestVal);
                     }
                     else
