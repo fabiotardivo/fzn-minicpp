@@ -88,10 +88,10 @@ int main(int argc, char * argv[])
 
             auto [min_idx, max_idx, min_score, max_score, mean] = stats;
 
-            fmt::print(
-                "Var {} | Info {:.2f} {:.2f} {:.2f} | Scores = {:.2f}\n",
-                varIdx, min_score, max_score, mean, fmt::join(mlScores, ", ")
-            );
+            // fmt::print(
+            //     "Var {} | Info {:.2f} {:.2f} {:.2f} | Scores = {:.2f}\n",
+            //     varIdx, min_score, max_score, mean, fmt::join(mlScores, ", ")
+            // );
 
             auto [score, idx] = ML::getScoreVal(stats, varRank, valRank);
             return std::make_pair(score, mlVals[idx]);
