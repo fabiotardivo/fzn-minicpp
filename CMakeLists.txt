@@ -80,8 +80,8 @@ add_executable(fzn-minicpp main.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_C
 target_link_libraries(fzn-minicpp cxxopts libfzn libminicpp)
 
 add_executable(fzn-minicpp-ml-solver main_ml_solver.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC} ${ML_SRC})
-target_include_directories(fzn-minicpp-ml-solver PRIVATE ${onnxruntime_SOURCE_DIR}/include fmt::fmt)
-target_link_libraries(fzn-minicpp-ml-solver cxxopts libfzn libminicpp ${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so)
+target_include_directories(fzn-minicpp-ml-solver PRIVATE ${onnxruntime_SOURCE_DIR}/include)
+target_link_libraries(fzn-minicpp-ml-solver cxxopts libfzn libminicpp ${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so fmt::fmt)
 
 add_executable(fzn-minicpp-ml-sampler main_ml_sampler.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC})
 target_link_libraries(fzn-minicpp-ml-sampler cxxopts libfzn libminicpp)
