@@ -9,6 +9,9 @@
 #include "fzn_variables_helper.h"
 #include "ml/utils.h"
 
+#include <fmt/core.h>
+#include <fmt/ranges.h>
+
 class FznSearchHelper
 {
     private:
@@ -62,28 +65,64 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
 
                 auto const varSel = [=,&infer]()
                 {
-                    auto pa = ML::getPartialAssignment(array_int_var);
-                    auto const scores = infer.scoreVariables(pa);
-                    auto const stats = ML::getStats(scores);
-                    return ML::evalVarsStat(stats, valRank);
+                    auto pa = ML::getPartialAssignmentMask(array_int_var);
+                    auto scores = infer.scoreVariables(pa);
+
+                    ML::filterScores(scores,pa);
+
+                    auto stats = ML::getStats(scores);
+                    auto const [min_idx, max_idx, min_score, max_score, mean, eom] = stats;
+
+                    // fmt::print("PA = [{}]\n", fmt::join(pa, ", "));
+                    // fmt::print("SC = [{}]\n", fmt::join(scores, ", "));
+                    // fmt::print("ST = [{}]\n", fmt::join(stats, ", "));
+                    // std::flush(std::cout);
+
+                    int const varIdx = ML::evalVarsStat(stats, valRank);
+                    assert(not array_int_var[varIdx]->isBound());
+                    return varIdx;
                 };
 
-                auto const valSel = [=, &infer](int varIdx)
+                auto const valSel= [=, &infer](int varIdx)
                 {
                     auto pa = ML::getPartialAssignment(array_int_var);
                     auto [vals, scores] = infer.scoreAllValuesForVar(pa, varIdx, array_int_var[varIdx]);
+
                     auto stats = ML::getStats(scores);
                     auto const valIdx = evalValsStat(stats, valRank);
                     return vals[valIdx];
                 };
 
+                auto const valOrd = [=, &infer](int varIdx)
+                {
+                    auto pa = ML::getPartialAssignment(array_int_var);
+                    auto [vals, scores] = infer.scoreAllValuesForVar(pa, varIdx, array_int_var[varIdx]);
+
+                    assert(valRank == ML::RankType::BEST or valRank == ML::RankType::WORST);
+                    auto constexpr bestCmp = [](float const & s1, float const & s2) {return s1 < s2;};
+                    auto constexpr worstCmp = [](float const & s1, float const & s2) {return s1 > s2;};
+                    ML::sortByKey(scores,vals, valRank == ML::RankType::BEST ? bestCmp : worstCmp);
+
+                    return vals;
+                };
+
                 auto ml_search_strategy = [=]()
                 {
                     auto const varIdx = varSel();
-                    auto const & var = array_int_var[varIdx];
-                    auto const val = valSel(varIdx);
-                    printf("Selected var[%d] = %d\n", varIdx, val);
-                    return indomain_fixed(array_int_var[0]->getSolver(), var, val);
+                    if (varIdx >= 0)
+                    {
+                        auto const & var = array_int_var[varIdx];
+                        return indomain_list(array_int_var[0]->getSolver(), var,valOrd(varIdx));
+
+                        //auto const val = valSel(varIdx);
+                        // printf("Selected var[%d] = %d\n", varIdx, val);
+                        // fflush(stdout);
+                        //return indomain_fixed(array_int_var[0]->getSolver(), var, val);
+                    }
+                    else
+                    {
+                        return Branches({});
+                    }
                 };
 
                return ml_search_strategy;

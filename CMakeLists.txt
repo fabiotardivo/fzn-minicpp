@@ -84,7 +84,7 @@ target_include_directories(fzn-minicpp-ml-solver PRIVATE ${onnxruntime_SOURCE_DI
 target_link_libraries(fzn-minicpp-ml-solver cxxopts libfzn libminicpp ${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so fmt::fmt)
 
 add_executable(fzn-minicpp-ml-sampler main_ml_sampler.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC})
-target_link_libraries(fzn-minicpp-ml-sampler cxxopts libfzn libminicpp)
+target_link_libraries(fzn-minicpp-ml-sampler cxxopts libfzn libminicpp fmt::fmt)
 
 add_executable(fzn-minicpp-ml-us-finder main_ml_us_finder.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC})
-target_link_libraries(fzn-minicpp-ml-us-finder cxxopts libfzn libminicpp)
+target_link_libraries(fzn-minicpp-ml-us-finder cxxopts libfzn libminicpp fmt::fmt)

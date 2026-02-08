@@ -64,6 +64,17 @@ namespace ML
     }
 
     inline
+    std::vector<int> getPartialAssignmentMask(IntVars const & vars)
+    {
+        std::vector<int> result = {};
+        for(auto const & var : vars)
+        {
+            result.push_back(var->isBound() ? 1 : UNASSIGNED_VALUE);
+        }
+        return result;
+    }
+
+    inline
     std::list<std::vector<float>> getAllPartialAssignments(int varIdx, IntVars const & vars, std::vector<float> const & pa)
     {
         std::list<std::vector<float>> result = {};
@@ -131,30 +142,47 @@ namespace ML
         return h / std::log(2.0f); // normalize to [0,1]
     }
 
+    inline
+    void filterScores(std::vector<float> & scores, std::vector<int> const& mask)
+    {
+        assert(scores.size() == mask.size());
+        int const size = scores.size();
+        for (int j = 0; j != size; j+=1)
+        {
+            int const maskValue = mask[j];
+            scores[j] = maskValue == UNASSIGNED_VALUE ? scores[j] : NAN;
+        }
+    }
+
     inline std::tuple<int,int,float,float,float,float>
     getStats(std::vector<float> const& scores)
     {
-        int min_idx = 0;
-        int max_idx = 0;
-        float min_score = scores[0];
-        float max_score = scores[0];
+        int min_idx = -1;
+        int max_idx = -1;
+        float min_score = std::numeric_limits<float>::max();
+        float max_score = std::numeric_limits<float>::lowest(); // Not min()!
         float mean = 0.0f;
 
         int n = 0;
-        int i = 0;
-
-        for (float x : scores)
+        int const sz = scores.size();
+        for (int i = 0; i < sz; i += 1)
         {
-            ++n;
-            mean += (x - mean) / n;  // incremental mean
+            float const x = scores[i];
+            if (not std::isnan(x))
+            {
+                ++n;
+                mean += (x - mean) / n;  // incremental mean
 
-            if (x < min_score) { min_score = x; min_idx = i; }
-            if (x > max_score) { max_score = x; max_idx = i; }
-
-            ++i;
+                if (x < min_score) { min_score = x; min_idx = i; }
+                if (x > max_score) { max_score = x; max_idx = i; }
+            }
         }
 
         float eom = bernoulli_entropy_01(mean);
+
+        assert(min_idx >= 0);
+        assert(max_idx >= 0);
+
         return {min_idx, max_idx, min_score, max_score, mean, eom};
     }
 
@@ -187,4 +215,42 @@ namespace ML
             throw std::runtime_error("Unsupported variable rank.");
         }
     }
+
+    template <class K, class V, class Comp>
+    inline void sortByKey(std::vector<K>& keys, std::vector<V>& vals,
+                          int lo, int hi, Comp comp)
+    {
+        auto swap_both = [&](int i, int j) {
+            std::swap(keys[i], keys[j]);
+            std::swap(vals[i], vals[j]);
+        };
+
+        int i = lo, j = hi;
+        const K pivot = keys[lo + (hi - lo) / 2];
+
+        // Partition using comparator: comp(a,b) means "a should come before b"
+        while (i <= j) {
+            while (comp(keys[i], pivot)) ++i;
+            while (comp(pivot, keys[j])) --j;
+            if (i <= j) { swap_both(i, j); ++i; --j; }
+        }
+
+        if (lo < j) sortByKey(keys, vals, lo, j, comp);
+        if (i < hi) sortByKey(keys, vals, i, hi, comp);
+    }
+
+    template <class K, class V, class Comp>
+    inline void sortByKey(std::vector<K>& keys, std::vector<V>& vals, Comp comp)
+    {
+        if (keys.empty() || keys.size() != vals.size()) return;
+        sortByKey(keys, vals, 0, (int)keys.size() - 1, comp);
+    }
+
+    // Convenience overload: descending by key (largest first)
+    template <class K, class V>
+    inline void sortByKey(std::vector<K>& keys, std::vector<V>& vals)
+    {
+        sortByKey(keys, vals, std::greater<K>{});
+    }
+
 }
