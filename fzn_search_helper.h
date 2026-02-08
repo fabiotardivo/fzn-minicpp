@@ -7,6 +7,8 @@
 #include "Model.h"
 #include "search.hpp"
 #include "fzn_variables_helper.h"
+#include "ml/utils.h"
+#include "ml/BatchedOnnxInferDual.h"
 
 class FznSearchHelper
 {
@@ -18,8 +20,7 @@ class FznSearchHelper
         FznSearchHelper(CPSolver::Ptr solver, FznVariablesHelper & fvh);
         std::function<Branches(void)> getSearchStrategy(Fzn::Model const & fzn_model);
         std::function<Branches(void)> getSampleStrategy(Fzn::Model const & fzn_model);
-        template <typename EFun>
-        std::function<Branches(void)> getMLSearchStrategy(Fzn::Model const & fzn_model, int nInitiallyAssigned, EFun eval_fun);
+        std::function<Branches(void)> getMLSearchStrategy(Fzn::Model const & fzn_model, ML::RankType valRank, ML::RankType varRank, BatchedOnnxInferDual & infer);
         std::vector<var<int>::Ptr> getIntDecisionalVars(Fzn::Model const & fzn_model);
         std::vector<var<int>::Ptr> getIntDecisionalVars(Fzn::var_expr_t var_expr);
         std::vector<var<bool>::Ptr> getBoolDecisionalVars(Fzn::var_expr_t vars_expr);
@@ -98,118 +99,3 @@ std::function<Branches(CPSolver::Ptr, Var)> FznSearchHelper::makeValueSelection(
         throw runtime_error(msg.str());
     }
 }
-
-template<typename EFun>
-std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model const & fzn_model, int nInitiallyAssigned, EFun eval_fun)
-{
-    using namespace std;
-
-    for (auto const & search_annotation: fzn_model.search_strategy)
-    {
-        if (holds_alternative<Fzn::basic_search_annotation_t>(search_annotation))
-        {
-            auto const & basic_search_annotation = get<Fzn::basic_search_annotation_t>(search_annotation);
-            auto search_strategy = makeBasicSearchStrategy(basic_search_annotation);
-            auto const & pred_identifier = get<0>(basic_search_annotation);
-            auto const & var_expr = get<1>(basic_search_annotation);
-            auto const & annotations = get<2>(basic_search_annotation);
-
-
-            if (pred_identifier == "int_search")
-            {
-                using int_var_t = var<int>::Ptr;
-                using array_int_var_t = vector<int_var_t>;
-
-                auto const varSel = makeVariableSelection<array_int_var_t, int_var_t>(annotations.at(0).first);
-
-                // Decision variables
-                using int_var_t = var<int>::Ptr;
-                using array_int_var_t = vector<int_var_t>;
-
-                array_int_var_t array_int_var = getIntDecisionalVars(var_expr);
-                auto const nVars = static_cast<int>(array_int_var.size());
-
-                auto ml_val_search_strategy = [=]()
-                {
-                    int_var_t const & var = varSel(array_int_var);
-                    if (var != nullptr)
-                    {
-                        int varIdx = -1;
-                        for (auto i = 0; i < array_int_var.size(); ++i)
-                        {
-                            if (array_int_var[i]->getId() == var->getId())
-                            {
-                                varIdx = i;
-                                break;
-                            }
-                        }
-                        auto [score, unc, val] = eval_fun(varIdx, array_int_var);
-                        return indomain_fixed(array_int_var[0]->getSolver(), var, val);
-                    }
-                    return search_strategy();
-                };
-
-                auto ml_search_strategy = [=]()
-                {
-                    int nAssigned = 0;
-                    for (auto const & var : array_int_var)
-                    {
-                        nAssigned += var->isBound();
-                    }
-
-                    if (nAssigned - nInitiallyAssigned < nVars / 5)
-                    {
-                        int_var_t bestVar = nullptr;
-                        int bestVarIndex = -1;
-                        auto bestVal = std::numeric_limits<int>::max();;
-                        float bestScore = std::numeric_limits<float>::max();
-                        float uncBest = 0;
-                        for (auto varIdx = 0; varIdx < nVars; varIdx += 1)
-                        {
-                            auto const &var = array_int_var[varIdx];
-
-                            if (not var->isBound())
-                            {
-                                auto [score, unc, val] = eval_fun(varIdx, array_int_var);
-                                bool const smallerDomain = bestVar != nullptr ? var->size() < bestVar->size(): true;
-                                if (score < bestScore or score == bestScore and unc < uncBest)
-                                {
-                                    bestScore = score;
-                                    bestVal = val;
-                                    bestVar = var;
-                                    uncBest = unc;
-                                    bestVarIndex = varIdx;
-                                    //printf("New best score %5.3f for var[%3d] = %3d\n", bestScore, varIdx, val);
-                                }
-                            }
-                        }
-                        printf("Using ML strategy var[%d] = %d (Uncertainty = %.2f | Bounded vars %d/%d)\n", bestVarIndex, bestVal, uncBest, nAssigned, nVars);
-                        return indomain_fixed(array_int_var[0]->getSolver(), bestVar, bestVal);
-                    //if (uncBest < 0.15 and bestVar != nullptr)
-                    //{
-                    //     printf("Using ML strategy (Uncertainty %.2f)\r", uncBest);
-                    //     return indomain_fixed(array_int_var[0]->getSolver(), bestVar, bestVal);
-                    }
-                    else
-                    {
-                        return search_strategy();
-                    }
-                };
-
-                return  ml_val_search_strategy;
-            }
-            else
-            {
-                throw std::runtime_error("Unsupported search annotation");
-            }
-        }
-        else
-        {
-            throw std::runtime_error("Unsupported search annotation");
-        }
-    }
-
-    return {};
-}
-
-

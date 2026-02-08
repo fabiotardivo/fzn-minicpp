@@ -159,43 +159,32 @@ namespace ML
     }
 
     inline
-    EvalResultType getScoreVal(StatsType const & stats, RankType varRank, RankType valRank)
+    int evalValsStat(StatsType const & stats, RankType valRank)
     {
         auto [min_idx, max_idx, min_score, max_score, mean, eom01] = stats;
-        float score = std::numeric_limits<float>::max();
-        int idx = std::numeric_limits<int>::max();
-        float unc = 0;
-        switch (varRank)
-        {
-            case BEST:
-                score = min_score;
-                break;
-            case WORST:
-                score = max_score;
-                break;
-            case BEST_AVG:
-                score = mean;
-                unc = eom01;
-                break;
-            case WORST_AVG:
-                score = -mean;
-                unc = eom01;
-                break;
-            default:
-                throw std::runtime_error("Invalid varioable rank.");
-        };
         switch (valRank)
         {
         case BEST:
-            idx = min_idx;
-            break;
+            return min_idx;
         case WORST:
-            idx = max_idx;
-            break;
+            return  max_idx;
         default:
             throw std::runtime_error("Invalid value rank.");
-        };
-        return {score, unc, idx};
+        }
+    }
 
+    inline
+    int evalVarsStat(StatsType const & stats, RankType varRank)
+    {
+        auto [min_idx, max_idx, min_score, max_score, mean, eom01] = stats;
+        switch (varRank)
+        {
+        case BEST:
+            return min_idx;
+        case WORST:
+            return max_idx;
+        default:
+            throw std::runtime_error("Unsupported variable rank.");
+        }
     }
 }

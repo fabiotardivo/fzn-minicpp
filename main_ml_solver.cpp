@@ -1,4 +1,4 @@
-#include <ml/OnnxHandler.h>
+#include <ml/BatchedOnnxInferDual.h>
 #include <Parser.h>
 #include <Printer.h>
 #include <solver.hpp>
@@ -22,7 +22,8 @@ int main(int argc, char * argv[])
 
     // Parse options
     std::string fzn;
-    std::string model;
+    std::string valModel;
+    std::string varModel;
     std::string varRankStr = "worst";
     std::string valRankStr = "worst";
     bool gpuInference = false;
@@ -35,7 +36,8 @@ int main(int argc, char * argv[])
         ("n", "Stop search after <n> solutions", cxxopts::value<unsigned int>())
         ("s", "Print search statistics", cxxopts::value<bool>())
         ("t", "Stop search after <t> ms", cxxopts::value<unsigned int>())
-        ("model", "Machine learning model in ONNX format", cxxopts::value<std::string>(model))
+        ("val-model", "Machine learning model in ONNX format", cxxopts::value<std::string>(valModel))
+        ("var-model", "Machine learning model in ONNX format", cxxopts::value<std::string>(varModel))
         ("g,gpu", "Use GPU for inference", cxxopts::value<bool>(gpuInference))
         ("var-rank", "Criteria to rank variables: best, worst, bestAvg, worstAvg (Default = worstAvg)", cxxopts::value<std::string>(varRankStr))
         ("val-rank", "Criteria to rank values: best, worst, bestAvg, worstAvg (Default = worst)", cxxopts::value<std::string>(valRankStr))
@@ -45,7 +47,7 @@ int main(int argc, char * argv[])
 
     auto args = optsParser.parse(argc, argv);
 
-    if ((args.count("h") == 0) and (not fzn.empty()) and (not model.empty()))
+    if ((args.count("h") == 0) and (not fzn.empty()) and (not valModel.empty()) and (not varModel.empty()))
     {
         // Create Statistics
         SearchStatistics stats;
@@ -75,37 +77,9 @@ int main(int argc, char * argv[])
         // Load ML evaluator with ONNX
         ML::RankType varRank = ML::rankFromString(varRankStr);
         ML::RankType valRank = ML::rankFromString(valRankStr);
-        BatchedOnnxInfer infer(model,gpuInference);
-        std::vector<float> mlScores;
-        std::vector<int> mlVals;
-        std::vector<int> mlPa;
-        int nInitiallyAssigned = 0;
-        for (auto const & var : intDecVars)
-        {
-            nInitiallyAssigned += var->isBound();
-        }
+        BatchedOnnxInferDual infer(valModel, varModel, gpuInference);
 
-        // Batched ML evaluation function
-        ML::EvalFunctionType eval_fun = [&](int varIdx, ML::IntVars const& vars)
-        {
-            mlPa = ML::getPartialAssignment(vars);
-            auto [mlVals, mlScores] = infer.scoreAllValuesForVar(mlPa, varIdx, vars[varIdx]);
-            auto stats = ML::getStats(mlScores);
-
-            auto [min_idx, max_idx, min_score, max_score, mean, eom01] = stats;
-
-            // fmt::print(
-            //     "Var {} | Info {:.2f} {:.2f} {:.2f} {:.2f} | Scores = {:.2f}\n",
-            //     varIdx, min_score, max_score, mean, eom01 fmt::join(mlScores, ", ")
-            // );
-
-            auto [score, unc, idx] = ML::getScoreVal(stats, varRank, valRank);
-            return std::make_tuple(score, unc, mlVals[idx]);
-        };
-
-
-
-        DFSearch search(solver, searchHelper.getMLSearchStrategy(fznModel, nInitiallyAssigned, eval_fun));
+        DFSearch search(solver, searchHelper.getMLSearchStrategy(fznModel, valRank, varRank, infer));
         FznStatisticsHelper::hookToSearch(stats, search);
 
         // Search limits
