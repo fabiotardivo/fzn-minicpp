@@ -112,6 +112,8 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
             auto search_strategy = makeBasicSearchStrategy(basic_search_annotation);
             auto const & pred_identifier = get<0>(basic_search_annotation);
             auto const & var_expr = get<1>(basic_search_annotation);
+            auto const & annotations = get<2>(basic_search_annotation);
+
             if (pred_identifier == "int_search")
             {
                 using int_var_t = var<int>::Ptr;
@@ -120,6 +122,30 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                 // Decision variables
                 array_int_var_t array_int_var = getIntDecisionalVars(var_expr);
                 auto const nVars = static_cast<int>(array_int_var.size());
+
+                auto ml_val_search_strategy = [=]()
+                {
+                    using int_var_t = var<int>::Ptr;
+                    using array_int_var_t = vector<int_var_t>;
+
+                    auto const & var_sel = makeVariableSelection<array_int_var_t, int_var_t>(annotations.at(0).first);
+
+                    if (var_sel != nullptr)
+                    {
+                        int varIdx = -1;
+                        for (auto i = 0; i < (array_int_var.size(); ++i)
+                        {
+                            if (array_int_var[i] == var_sel)
+                            {
+                                varIdx = i;
+                                break;
+                            }
+                        }
+                        auto [score, unc, val] = eval_fun(varIdx, array_int_var);
+                        return indomain_fixed(array_int_var[0]->getSolver(), var_sel, val);
+                    }
+                    return search_strategy();
+                };
 
                 auto ml_search_strategy = [=]()
                 {
@@ -136,9 +162,12 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                         auto bestVal = std::numeric_limits<int>::max();;
                         float bestScore = std::numeric_limits<float>::max();
                         float uncBest = 0;
-                        for (auto varIdx = 0; varIdx < nVars; varIdx += 1) {
+                        for (auto varIdx = 0; varIdx < nVars; varIdx += 1)
+                        {
                             auto const &var = array_int_var[varIdx];
-                            if (not var->isBound()) {
+
+                            if (not var->isBound())
+                            {
                                 auto [score, unc, val] = eval_fun(varIdx, array_int_var);
                                 bool const smallerDomain = bestVar != nullptr ? var->size() < bestVar->size(): true;
                                 if (score < bestScore or score == bestScore and unc < uncBest)
@@ -165,7 +194,7 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                     }
                 };
 
-                return  ml_search_strategy;
+                return  ml_val_search_strategy;
             }
             else
             {
