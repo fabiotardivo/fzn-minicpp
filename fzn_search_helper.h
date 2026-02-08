@@ -132,6 +132,7 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                     if (nAssigned - nInitiallyAssigned < nVars / 5)
                     {
                         int_var_t bestVar = nullptr;
+                        int bestVarIndex = -1;
                         auto bestVal = std::numeric_limits<int>::max();;
                         float bestScore = std::numeric_limits<float>::max();
                         float uncBest = 0;
@@ -146,11 +147,12 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                                     bestVal = val;
                                     bestVar = var;
                                     uncBest = unc;
+                                    bestVarIndex = varIdx;
                                     //printf("New best score %5.3f for var[%3d] = %3d\n", bestScore, varIdx, val);
                                 }
                             }
                         }
-                        printf("Using ML strategy (Bounded vars %d/%d)\n", nAssigned, nVars);
+                        printf("Using ML strategy var[%d] = %d (Uncertainty = %.2f | Bounded vars %d/%d)\n", bestVarIndex, bestVal, uncBest, nAssigned, nVars);
                         return indomain_fixed(array_int_var[0]->getSolver(), bestVar, bestVal);
                     //if (uncBest < 0.15 and bestVar != nullptr)
                     //{
