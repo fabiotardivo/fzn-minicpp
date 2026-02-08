@@ -8,7 +8,6 @@
 #include "search.hpp"
 #include "fzn_variables_helper.h"
 #include "ml/utils.h"
-#include "ml/BatchedOnnxInferDual.h"
 
 class FznSearchHelper
 {
