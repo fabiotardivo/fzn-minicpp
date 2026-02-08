@@ -123,29 +123,38 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
 
                 auto ml_search_strategy = [=]()
                 {
-                    int_var_t bestVar = nullptr;
-                    auto bestVal = std::numeric_limits<int>::max();;
-                    float bestScore = std::numeric_limits<float>::max();
-                    float uncBest = 0;
-                    for (auto varIdx = 0; varIdx < nVars; varIdx += 1) {
-                        auto const &var = array_int_var[varIdx];
-                        if (not var->isBound()) {
-                            auto [score, unc, val] = eval_fun(varIdx, array_int_var);
-                            bool const smallerDomain = bestVar != nullptr ? var->size() < bestVar->size(): true;
-                            if (score < bestScore or score == bestScore and smallerDomain)
-                            {
-                                bestScore = score;
-                                bestVal = val;
-                                bestVar = var;
-                                uncBest = unc;
-                                //printf("New best score %5.3f for var[%3d] = %3d\n", bestScore, varIdx, val);
+                    int nAssigned = 0;
+                    for (auto const & var : array_int_var)
+                    {
+                        nAssigned += var->isBound();
+                    }
+
+                    if (nAssigned < 5)
+                    {
+                        int_var_t bestVar = nullptr;
+                        auto bestVal = std::numeric_limits<int>::max();;
+                        float bestScore = std::numeric_limits<float>::max();
+                        float uncBest = 0;
+                        for (auto varIdx = 0; varIdx < nVars; varIdx += 1) {
+                            auto const &var = array_int_var[varIdx];
+                            if (not var->isBound()) {
+                                auto [score, unc, val] = eval_fun(varIdx, array_int_var);
+                                bool const smallerDomain = bestVar != nullptr ? var->size() < bestVar->size(): true;
+                                if (score < bestScore or score == bestScore and smallerDomain)
+                                {
+                                    bestScore = score;
+                                    bestVal = val;
+                                    bestVar = var;
+                                    uncBest = unc;
+                                    //printf("New best score %5.3f for var[%3d] = %3d\n", bestScore, varIdx, val);
+                                }
                             }
                         }
-                    }
-                    if (uncBest < 0.15 and bestVar != nullptr)
-                    {
-                        printf("Using ML strategy (Uncertainty %.2f)\r", uncBest);
                         return indomain_fixed(array_int_var[0]->getSolver(), bestVar, bestVal);
+                    //if (uncBest < 0.15 and bestVar != nullptr)
+                    //{
+                    //     printf("Using ML strategy (Uncertainty %.2f)\r", uncBest);
+                    //     return indomain_fixed(array_int_var[0]->getSolver(), bestVar, bestVal);
                     }
                     else
                     {
