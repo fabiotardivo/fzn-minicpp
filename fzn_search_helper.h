@@ -82,6 +82,7 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                     auto const varIdx = varSel();
                     auto const & var = array_int_var[varIdx];
                     auto const val = valSel(varIdx);
+                    printf("Selected var[%d] = %d\n", varIdx, val);
                     return indomain_fixed(array_int_var[0]->getSolver(), var, val);
                 };
 
