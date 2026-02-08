@@ -140,7 +140,7 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                             if (not var->isBound()) {
                                 auto [score, unc, val] = eval_fun(varIdx, array_int_var);
                                 bool const smallerDomain = bestVar != nullptr ? var->size() < bestVar->size(): true;
-                                if (score < bestScore or score == bestScore and smallerDomain)
+                                if (score < bestScore or score == bestScore and unc < uncBest)
                                 {
                                     bestScore = score;
                                     bestVal = val;
