@@ -150,6 +150,7 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                                 }
                             }
                         }
+                        printf("Using ML strategy (Bounded vars %d/%d)\r", nAssigned, nVars);
                         return indomain_fixed(array_int_var[0]->getSolver(), bestVar, bestVal);
                     //if (uncBest < 0.15 and bestVar != nullptr)
                     //{
