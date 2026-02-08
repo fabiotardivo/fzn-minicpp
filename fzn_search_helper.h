@@ -142,7 +142,7 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                             }
                         }
                     }
-                    if (uncBest < 0.3 and bestVar != nullptr)
+                    if (uncBest < 0.15 and bestVar != nullptr)
                     {
                         printf("Using ML strategy (Uncertainty %.2f)\n", uncBest);
                         return indomain_fixed(array_int_var[0]->getSolver(), bestVar, bestVal);
