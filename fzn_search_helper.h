@@ -19,7 +19,7 @@ class FznSearchHelper
         std::function<Branches(void)> getSearchStrategy(Fzn::Model const & fzn_model);
         std::function<Branches(void)> getSampleStrategy(Fzn::Model const & fzn_model);
         template <typename EFun>
-        std::function<Branches(void)> getMLSearchStrategy(Fzn::Model const & fzn_model, EFun eval_fun);
+        std::function<Branches(void)> getMLSearchStrategy(Fzn::Model const & fzn_model, int nInitiallyAssigned, EFun eval_fun);
         std::vector<var<int>::Ptr> getIntDecisionalVars(Fzn::Model const & fzn_model);
         std::vector<var<int>::Ptr> getIntDecisionalVars(Fzn::var_expr_t var_expr);
         std::vector<var<bool>::Ptr> getBoolDecisionalVars(Fzn::var_expr_t vars_expr);
@@ -100,7 +100,7 @@ std::function<Branches(CPSolver::Ptr, Var)> FznSearchHelper::makeValueSelection(
 }
 
 template<typename EFun>
-std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model const & fzn_model, EFun eval_fun)
+std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model const & fzn_model, int nInitiallyAssigned, EFun eval_fun)
 {
     using namespace std;
 
@@ -129,7 +129,7 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                         nAssigned += var->isBound();
                     }
 
-                    if (nAssigned < nVars / 5)
+                    if (nAssigned - nInitiallyAssigned < 5)
                     {
                         int_var_t bestVar = nullptr;
                         auto bestVal = std::numeric_limits<int>::max();;

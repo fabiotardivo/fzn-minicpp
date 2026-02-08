@@ -70,14 +70,20 @@ int main(int argc, char * argv[])
 
         // Create Search
         FznSearchHelper searchHelper(solver, varsHelper);
+        auto const intDecVars = searchHelper.getIntDecisionalVars(fznModel);
 
-        // Load ML evaluator with PyTorch
+        // Load ML evaluator with ONNX
         ML::RankType varRank = ML::rankFromString(varRankStr);
         ML::RankType valRank = ML::rankFromString(valRankStr);
         BatchedOnnxInfer infer(model,gpuInference);
         std::vector<float> mlScores;
         std::vector<int> mlVals;
         std::vector<int> mlPa;
+        int nInitiallyAssigned = 0;
+        for (auto const & var : intDecVars)
+        {
+            nInitiallyAssigned += var->isBound();
+        }
 
         // Batched ML evaluation function
         ML::EvalFunctionType eval_fun = [&](int varIdx, ML::IntVars const& vars)
@@ -99,7 +105,7 @@ int main(int argc, char * argv[])
 
 
 
-        DFSearch search(solver, searchHelper.getMLSearchStrategy(fznModel, eval_fun));
+        DFSearch search(solver, searchHelper.getMLSearchStrategy(fznModel, nInitiallyAssigned, eval_fun));
         FznStatisticsHelper::hookToSearch(stats, search);
 
         // Search limits
