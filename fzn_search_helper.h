@@ -129,7 +129,7 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                         nAssigned += var->isBound();
                     }
 
-                    if (nAssigned < 5)
+                    if (nAssigned < nVars / 5)
                     {
                         int_var_t bestVar = nullptr;
                         auto bestVal = std::numeric_limits<int>::max();;
