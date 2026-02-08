@@ -79,69 +79,6 @@ std::function<Branches(void)> FznSearchHelper::getSampleStrategy(Fzn::Model cons
     }
 }
 
-std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model const & fzn_model, ML::RankType valRank, ML::RankType varRank, BatchedOnnxInferDual & infer)
-{
-    using namespace std;
-
-    for (auto const & search_annotation: fzn_model.search_strategy)
-    {
-        if (holds_alternative<Fzn::basic_search_annotation_t>(search_annotation))
-        {
-            auto const & basic_search_annotation = get<Fzn::basic_search_annotation_t>(search_annotation);
-            auto search_strategy = makeBasicSearchStrategy(basic_search_annotation);
-            auto const & pred_identifier = get<0>(basic_search_annotation);
-            auto const & var_expr = get<1>(basic_search_annotation);
-            auto const & annotations = get<2>(basic_search_annotation);
-
-
-            if (pred_identifier == "int_search")
-            {
-                // Decision variables
-                auto const array_int_var = getIntDecisionalVars(var_expr);
-                auto const nVars = static_cast<int>(array_int_var.size());
-
-                auto const varSel = [=,&infer]()
-                {
-                    auto pa = ML::getPartialAssignment(array_int_var);
-                    auto const scores = infer.scoreVariables(pa);
-                    auto const stats = ML::getStats(scores);
-                    return ML::evalVarsStat(stats, valRank);
-                };
-
-                auto const valSel = [=, &infer](int varIdx)
-                {
-                    auto pa = ML::getPartialAssignment(array_int_var);
-                    auto [vals, scores] = infer.scoreAllValuesForVar(pa, varIdx, array_int_var[varIdx]);
-                    auto stats = ML::getStats(scores);
-                    auto const valIdx = evalValsStat(stats, valRank);
-                    return vals[valIdx];
-                };
-
-                auto ml_search_strategy = [=]()
-                {
-                    auto const varIdx = varSel();
-                    auto const & var = array_int_var[varIdx];
-                    auto const val = valSel(varIdx);
-                    return indomain_fixed(array_int_var[0]->getSolver(), var, val);
-                };
-
-               return ml_search_strategy;
-                //return search_strategy();
-            }
-            else
-            {
-                throw std::runtime_error("Unsupported search annotation");
-            }
-        }
-        else
-        {
-            throw std::runtime_error("Unsupported search annotation");
-        }
-    }
-
-    return {};
-}
-
 std::vector<var<int>::Ptr> FznSearchHelper::getIntDecisionalVars(Fzn::Model const & fzn_model)
 {
     using namespace std;
