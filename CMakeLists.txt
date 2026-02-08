@@ -77,7 +77,7 @@ set(FZN_MINICPP_SRC
 
 # Executables
 add_executable(fzn-minicpp main.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC})
-target_link_libraries(fzn-minicpp cxxopts libfzn libminicpp)
+target_link_libraries(fzn-minicpp cxxopts libfzn libminicpp fmt::fmt)
 
 add_executable(fzn-minicpp-ml-solver main_ml_solver.cpp ${FZN_MINICPP_SRC} ${FZN_CONSTR_SRC} ${GLB_CONSTR_SRC} ${ML_SRC})
 target_include_directories(fzn-minicpp-ml-solver PRIVATE ${onnxruntime_SOURCE_DIR}/include)
