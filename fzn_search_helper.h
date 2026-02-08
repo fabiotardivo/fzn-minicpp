@@ -114,35 +114,37 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
             auto const & var_expr = get<1>(basic_search_annotation);
             auto const & annotations = get<2>(basic_search_annotation);
 
+
             if (pred_identifier == "int_search")
             {
                 using int_var_t = var<int>::Ptr;
                 using array_int_var_t = vector<int_var_t>;
 
+                auto const varSel = makeVariableSelection<array_int_var_t, int_var_t>(annotations.at(0).first);
+
                 // Decision variables
+                using int_var_t = var<int>::Ptr;
+                using array_int_var_t = vector<int_var_t>;
+
                 array_int_var_t array_int_var = getIntDecisionalVars(var_expr);
                 auto const nVars = static_cast<int>(array_int_var.size());
 
                 auto ml_val_search_strategy = [=]()
                 {
-                    using int_var_t = var<int>::Ptr;
-                    using array_int_var_t = vector<int_var_t>;
-
-                    auto const & var_sel = makeVariableSelection<array_int_var_t, int_var_t>(annotations.at(0).first);
-
-                    if (var_sel != nullptr)
+                    int_var_t const & var = varSel(array_int_var);
+                    if (var != nullptr)
                     {
                         int varIdx = -1;
-                        for (auto i = 0; i < (array_int_var.size(); ++i)
+                        for (auto i = 0; i < array_int_var.size(); ++i)
                         {
-                            if (array_int_var[i] == var_sel)
+                            if (array_int_var[i]->getId() == var->getId())
                             {
                                 varIdx = i;
                                 break;
                             }
                         }
                         auto [score, unc, val] = eval_fun(varIdx, array_int_var);
-                        return indomain_fixed(array_int_var[0]->getSolver(), var_sel, val);
+                        return indomain_fixed(array_int_var[0]->getSolver(), var, val);
                     }
                     return search_strategy();
                 };
