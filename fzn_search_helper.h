@@ -78,9 +78,29 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                     // fmt::print("ST = [{}]\n", fmt::join(stats, ", "));
                     // std::flush(std::cout);
 
-                    int const varIdx = ML::evalVarsStat(stats, valRank);
-                    assert(not array_int_var[varIdx]->isBound());
-                    return varIdx;
+                    if (eom < 0.3)
+                    {
+                        int const varIdx = ML::evalVarsStat(stats, valRank);
+                        assert(not array_int_var[varIdx]->isBound());
+                        return varIdx;
+                    }
+                    else
+                    {
+                        using int_var_t = var<int>::Ptr;
+                        using array_int_var_t = vector<int_var_t>;
+
+                        int_var_t const & var = makeVariableSelection<array_int_var_t, int_var_t>(annotations.at(0).first)(array_int_var);
+                        int varIdx = -1;
+                        for (int i = 0; i < nVars; i +=1)
+                        {
+                            if (array_int_var[i]->getId() == var->getId())
+                            {
+                                varIdx = i;
+                                break;
+                            }
+                        }
+                        return varIdx;
+                    }
                 };
 
                 auto const valSel= [=, &infer](int varIdx)
@@ -90,6 +110,7 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
 
                     auto stats = ML::getStats(scores);
                     auto const valIdx = evalValsStat(stats, valRank);
+
                     return vals[valIdx];
                 };
 
