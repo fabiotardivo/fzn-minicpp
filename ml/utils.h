@@ -7,7 +7,7 @@
 #include <ranges>
 
 #include "Common.h"
-
+#include "fmt/format.h"
 namespace ML
 {
 
@@ -72,6 +72,17 @@ namespace ML
             result.push_back(var->isBound() ? 1 : UNASSIGNED_VALUE);
         }
         return result;
+    }
+
+    inline
+    void printPartialAssignmen(IntVars const & vars)
+    {
+        auto const & pa = getPartialAssignmentMask(vars);
+        std::cout << (pa[0] == UNASSIGNED_VALUE ? "-" : fmt::format("{}", pa[0]));
+        for (int i = 1; i < pa.size(); i += 1)
+        {
+            std::cout << ", " << (pa[i] == UNASSIGNED_VALUE ? "-" : fmt::format("{}", pa[i]));
+        }
     }
 
     inline

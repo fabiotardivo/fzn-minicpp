@@ -1,5 +1,7 @@
 #pragma once
 
+
+
 #include <functional>
 
 #include <cxxopts.hpp>
@@ -45,6 +47,8 @@ template<typename Inference>
 std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model const & fzn_model, ML::RankType valRank, ML::RankType varRank, Inference & infer)
 {
     using namespace std;
+    using int_var_t = var<int>::Ptr;
+    using array_int_var_t = vector<int_var_t>;
 
     for (auto const & search_annotation: fzn_model.search_strategy)
     {
@@ -56,45 +60,37 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
             auto const & var_expr = get<1>(basic_search_annotation);
             auto const & annotations = get<2>(basic_search_annotation);
 
-
             if (pred_identifier == "int_search")
             {
                 // Decision variables
-                auto const array_int_var = getIntDecisionalVars(var_expr);
+                auto array_int_var = getIntDecisionalVars(var_expr);
                 auto const nVars = static_cast<int>(array_int_var.size());
 
-                auto const varSel = [=,&infer]()
+                auto constexpr bestCmp = [](float const & s1, float const & s2) {return s1 < s2;};
+                auto constexpr worstCmp = [](float const & s1, float const & s2) {return s1 > s2;};
+
+                auto pa = ML::getPartialAssignmentMask(array_int_var);
+                auto scores = infer.scoreVariables(pa);
+
+                auto * variables = new std::vector<int>(nVars);
+                std::iota(variables->begin(), variables->end(), 0);
+
+                assert(varRank == ML::RankType::BEST or varRank == ML::RankType::WORST);
+                ML::sortByKey(scores, *variables, valRank == ML::RankType::BEST ? bestCmp : worstCmp);
+                std::reverse(variables->begin(), variables->end());
+
+                auto const varOrd = [=,&infer]()
                 {
-                    auto pa = ML::getPartialAssignmentMask(array_int_var);
-                    auto scores = infer.scoreVariables(pa);
-
-                    ML::filterScores(scores,pa);
-
-                    auto stats = ML::getStats(scores);
-                    auto const [min_idx, max_idx, min_score, max_score, mean, eom] = stats;
-
-                    // fmt::print("PA = [{}]\n", fmt::join(pa, ", "));
-                    // fmt::print("ST = {}\n", stats);
-                    // fmt::print("SC = [{}]\n", fmt::join(scores, ", "));
-                    // fmt::print("ST = [{}]\n", fmt::join(stats, ", "));
-                    // std::flush(std::cout);
-
-                    int const varIdx = ML::evalVarsStat(stats, varRank);
-                    assert(not array_int_var[varIdx]->isBound());
-                    //fmt::print("ML Var {} (Uncertanty {:.2f})\n", varIdx,eom);
-                    return varIdx;
-
-                };
-
-                auto const valSel = [=, &infer](int varIdx)
-                {
-                    auto pa = ML::getPartialAssignment(array_int_var);
-                    auto [vals, scores] = infer.scoreAllValuesForVar(pa, varIdx, array_int_var[varIdx]);
-
-                    auto stats = ML::getStats(scores);
-                    auto const valIdx = evalValsStat(stats, valRank);
-
-                    return vals[valIdx];
+                    if (not variables->empty())
+                    {
+                        auto const varIdx = variables->back();
+                        variables->pop_back();
+                        return varIdx;
+                    }
+                    else
+                    {
+                        return -1;
+                    }
                 };
 
                 auto const valOrd = [=, &infer](int varIdx)
@@ -103,8 +99,6 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                     auto [vals, scores] = infer.scoreAllValuesForVar(pa, varIdx, array_int_var[varIdx]);
 
                     assert(valRank == ML::RankType::BEST or valRank == ML::RankType::WORST);
-                    auto constexpr bestCmp = [](float const & s1, float const & s2) {return s1 < s2;};
-                    auto constexpr worstCmp = [](float const & s1, float const & s2) {return s1 > s2;};
                     ML::sortByKey(scores,vals, valRank == ML::RankType::BEST ? bestCmp : worstCmp);
 
                     return vals;
@@ -112,21 +106,26 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
 
                 auto ml_search_strategy = [=]()
                 {
-                    auto const varIdx = varSel();
+
+
+                    std::vector<std::function<void(void)>> branches;
+                    auto const varIdx = varOrd();
                     if (varIdx >= 0)
                     {
-                        auto const & var = array_int_var[varIdx];
-                        return indomain_list(array_int_var[0]->getSolver(), var,valOrd(varIdx));
+                        auto & var = array_int_var[varIdx];
+                        assert(not var->isBound());
 
-                        //auto const val = valSel(varIdx);
-                        // printf("Selected var[%d] = %d\n", varIdx, val);
-                        // fflush(stdout);
-                        //return indomain_fixed(array_int_var[0]->getSolver(), var, val);
+                        for (int const & val :  valOrd(varIdx))
+                        {
+                            branches.emplace_back([this,var,val, varIdx]()
+                            {
+                                //std::cerr << "%% Choosing  x[" << varIdx <<  "] == " << val  << " (Size " << var->size() << ")" << std::endl << std::flush;
+                                return solver->post(new (solver) EQc(var, val));
+                            });
+                        }
+
                     }
-                    else
-                    {
-                        return Branches({});
-                    }
+                    return Branches(branches);
                 };
 
                return ml_search_strategy;
