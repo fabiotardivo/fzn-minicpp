@@ -74,36 +74,19 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                     auto const [min_idx, max_idx, min_score, max_score, mean, eom] = stats;
 
                     // fmt::print("PA = [{}]\n", fmt::join(pa, ", "));
+                    // fmt::print("ST = {}\n", stats);
                     // fmt::print("SC = [{}]\n", fmt::join(scores, ", "));
                     // fmt::print("ST = [{}]\n", fmt::join(stats, ", "));
                     // std::flush(std::cout);
 
-                    if (eom < 0.3)
-                    {
-                        int const varIdx = ML::evalVarsStat(stats, valRank);
-                        assert(not array_int_var[varIdx]->isBound());
-                        return varIdx;
-                    }
-                    else
-                    {
-                        using int_var_t = var<int>::Ptr;
-                        using array_int_var_t = vector<int_var_t>;
+                    int const varIdx = ML::evalVarsStat(stats, varRank);
+                    assert(not array_int_var[varIdx]->isBound());
+                    //fmt::print("ML Var {} (Uncertanty {:.2f})\n", varIdx,eom);
+                    return varIdx;
 
-                        int_var_t const & var = makeVariableSelection<array_int_var_t, int_var_t>(annotations.at(0).first)(array_int_var);
-                        int varIdx = -1;
-                        for (int i = 0; i < nVars; i +=1)
-                        {
-                            if (array_int_var[i]->getId() == var->getId())
-                            {
-                                varIdx = i;
-                                break;
-                            }
-                        }
-                        return varIdx;
-                    }
                 };
 
-                auto const valSel= [=, &infer](int varIdx)
+                auto const valSel = [=, &infer](int varIdx)
                 {
                     auto pa = ML::getPartialAssignment(array_int_var);
                     auto [vals, scores] = infer.scoreAllValuesForVar(pa, varIdx, array_int_var[varIdx]);
