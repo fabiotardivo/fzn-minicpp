@@ -76,7 +76,7 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                 std::iota(variables->begin(), variables->end(), 0);
 
                 assert(varRank == ML::RankType::BEST or varRank == ML::RankType::WORST);
-                ML::sortByKey(scores, *variables, valRank == ML::RankType::BEST ? bestCmp : worstCmp);
+                ML::sortByKey(scores, *variables, varRank == ML::RankType::BEST ? bestCmp : worstCmp);
                 std::reverse(variables->begin(), variables->end());
 
                 auto const varOrd = [=,&infer]()
