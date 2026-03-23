@@ -10,6 +10,7 @@ FznCliHelper::FznCliHelper() :
             ("n", "Stop search after 'arg' solutions", cxxopts::value<unsigned int>())
             ("s", "Print search statistics", cxxopts::value<bool>())
             ("t", "Stop search after 'arg' ms", cxxopts::value<unsigned int>())
+            ("failures", "Stop search after 'arg' failures",cxxopts::value<unsigned long long>())
             ("fzn", "FlatZinc", cxxopts::value<std::string>())
             ("h,help", "Print usage");
     options_parser.parse_positional({"fzn"});

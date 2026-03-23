@@ -41,7 +41,7 @@ int main(int argc, char * argv[])
         ("g,gpu", "Use GPU for inference", cxxopts::value<bool>(gpuInference))
         ("var-rank", "Criteria to rank variables: best, worst, bestAvg, worstAvg (Default = worstAvg)", cxxopts::value<std::string>(varRankStr))
         ("val-rank", "Criteria to rank values: best, worst, bestAvg, worstAvg (Default = worst)", cxxopts::value<std::string>(valRankStr))
-         ("fzn", "FlatZinc", cxxopts::value<std::string>(fzn))
+        ("fzn", "FlatZinc", cxxopts::value<std::string>(fzn))
         ("h,help", "Print usage");
     optsParser.parse_positional({"fzn"});
 
@@ -81,6 +81,7 @@ int main(int argc, char * argv[])
 
         DFSearch search(solver, searchHelper.getMLSearchStrategy(fznModel, valRank, varRank, infer));
         FznStatisticsHelper::hookToSearch(stats, search);
+        search.onFailure([]{printf("Fail\n");});
 
         // Search limits
         Limit searchLimits = FznSearchHelper::makeSearchLimits(fznModel, args);

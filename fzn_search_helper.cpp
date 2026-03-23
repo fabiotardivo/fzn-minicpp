@@ -1,6 +1,8 @@
 #include "fzn_search_helper.h"
 #include "ml/utils.h"
 
+#include <fmt/ranges.h>
+
 FznSearchHelper::FznSearchHelper(CPSolver::Ptr solver, FznVariablesHelper & fvh) :
     solver(solver), fvh(fvh)
 {}
@@ -55,7 +57,7 @@ std::function<Branches(void)> FznSearchHelper::getSearchStrategy(Fzn::Model cons
     return land(search_strategy);
 }
 
-std::function<Branches(void)> FznSearchHelper::getSampleStrategy(Fzn::Model const & fzn_model)
+std::function<Branches(void)> FznSearchHelper::getSampleStrategy(Fzn::Model const & fzn_model, double temperature)
 {
     using namespace std;
 
@@ -66,7 +68,7 @@ std::function<Branches(void)> FznSearchHelper::getSampleStrategy(Fzn::Model cons
         if (holds_alternative<Fzn::basic_search_annotation_t>(search_annotation))
         {
             auto const & basic_search_annotation = get<Fzn::basic_search_annotation_t>(search_annotation);
-            return makeBasicSampleStrategy(basic_search_annotation);
+            return makeBasicSampleStrategy(basic_search_annotation, temperature);
         }
         else
         {
@@ -169,10 +171,14 @@ Limit FznSearchHelper::makeSearchLimits(Fzn::Model const & fzn_model, cxxopts::P
 {
     auto const max_solutions = FznSearchHelper::getMaxSolutions(fzn_model, args);
     auto const max_time_ms = FznSearchHelper::getMaxSearchTime(args);
+    auto const max_failures  =  FznSearchHelper::getMaxFailures(args);
+
 
     return [=](SearchStatistics const & search_statistics)
     {
-        return search_statistics.getSolutions() >= max_solutions or search_statistics.getRunningTime() * 1000 >= max_time_ms;
+        return search_statistics.getSolutions() >= max_solutions or
+               search_statistics.getRunningTime() * 1000 >= max_time_ms or
+               search_statistics.getFailures() >= max_failures;
     };
 }
 
@@ -215,27 +221,27 @@ std::function<Branches(void)> FznSearchHelper::makeBasicSearchStrategy(Fzn::basi
     }
 }
 
-std::function<Branches(void)> FznSearchHelper::makeBasicSampleStrategy(Fzn::basic_search_annotation_t const & basic_search_annotation)
+std::function<Branches(void)> FznSearchHelper::makeBasicSampleStrategy(
+    Fzn::basic_search_annotation_t const & basic_search_annotation,
+    double temperature)
 {
     using namespace std;
-
     auto const & pred_identifier = get<0>(basic_search_annotation);
-    auto const & var_expr = get<1>(basic_search_annotation);
-    auto const & annotations = get<2>(basic_search_annotation);
+    auto const & var_expr        = get<1>(basic_search_annotation);
+    auto const & annotations     = get<2>(basic_search_annotation);
 
     if (pred_identifier == "int_search")
     {
-        using int_var_t = var<int>::Ptr;
+        using int_var_t       = var<int>::Ptr;
         using array_int_var_t = vector<int_var_t>;
 
-        std::string const var_sel_name = "random";
-        std::string const val_sel_name = "indomain_random";
-        auto const & var_sel = makeVariableSelection<array_int_var_t, int_var_t>(var_sel_name);
-        auto const & val_sel = makeValueSelection<int_var_t>(val_sel_name);
+        auto const & var_sel = makeVariableSelectionProb<array_int_var_t, int_var_t>(
+            annotations.at(0).first, temperature);
+        auto const & val_sel = makeValueSelectionProb<int_var_t>(
+            annotations.at(1).first, temperature);
 
-        // Decision variables
         array_int_var_t array_int_var = getIntDecisionalVars(var_expr);
-        return [=,this](){return val_sel(solver, var_sel(array_int_var));};
+        return [=, this](){ return val_sel(solver, var_sel(array_int_var)); };
     }
     else
     {
@@ -244,7 +250,6 @@ std::function<Branches(void)> FznSearchHelper::makeBasicSampleStrategy(Fzn::basi
         throw runtime_error(msg.str());
     }
 }
-
 
 unsigned int
 FznSearchHelper::getMaxSolutions(Fzn::Model const & fzn_model, cxxopts::ParseResult const & args)
@@ -281,4 +286,13 @@ FznSearchHelper::getMaxSearchTime( cxxopts::ParseResult const & args)
     {
         return args["t"].as<unsigned int>();
     }
+}
+
+unsigned long long
+FznSearchHelper::getMaxFailures(cxxopts::ParseResult const & args)
+{
+    if (args.count("failures") == 0)
+        return std::numeric_limits<unsigned long long>::max();
+    else
+        return args["failures"].as<unsigned long long>();
 }

@@ -13,8 +13,22 @@
 namespace ML
 {
     inline
-    void Sampler(int sIdx, std::string const & fznPath, std::ostream & outFile, std::mutex & outMutex, bool & stop)
+    void Sampler(
+        int sIdx,
+        bool fixedSeed,
+        double temperature,
+        std::string const & fznPath,
+        std::ostream & outFile,
+        std::mutex & outMutex,
+        unsigned long long max_failures,
+        bool & stop)
     {
+        if (fixedSeed)
+        {
+            getVarRng().seed(sIdx);
+            getValRng().seed(sIdx);
+        }
+
         // First thread write the bounds
         if (sIdx == 0)
         {
@@ -42,7 +56,7 @@ namespace ML
 
         // Create Search
         FznSearchHelper searchHelper(solver, varsHelper);
-        DFSearch search(solver, searchHelper.getSampleStrategy(fznModel));
+        DFSearch search(solver, searchHelper.getSampleStrategy(fznModel, temperature));
         auto const intDecVars = searchHelper.getIntDecisionalVars(fznModel);
         auto const nIntDecVars = static_cast<int>(intDecVars.size());
 
@@ -83,7 +97,11 @@ namespace ML
         });
 
         // Sampling
-        search.sample(stop);
+        Limit limit = [max_failures, &stop](SearchStatistics const & ss)
+        {
+            return stop or ss.getFailures() >= max_failures;
+        };
+        search.sample(stop, limit, 100000);
 
         // Flush the buffer
         buffer.dump(outMutex,outFile);
