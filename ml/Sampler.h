@@ -101,7 +101,7 @@ namespace ML
         {
             return stop or ss.getFailures() >= max_failures;
         };
-        search.sample(stop, limit, 100000);
+        search.solve(limit);
 
         // Flush the buffer
         buffer.dump(outMutex,outFile);

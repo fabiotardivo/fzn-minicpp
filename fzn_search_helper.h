@@ -85,8 +85,12 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                             auto [min_idx, max_idx, min_score, max_score, mean, eom01] = ML::getStats(valScores);
                             variables->emplace_back(varIdx);
                             //scores.emplace_back(mean);
+                            std::uniform_real_distribution<float> noise_dist(-1e-3f, 1e-3f);
                             float size_bonus = 1e-4f / static_cast<float>(array_int_var[varIdx]->size());
-                            scores.emplace_back(mean + size_bonus);
+                            //float noise = noise_dist(getVarRng());  // uses seeded RNG
+                            float min_bonus = 1e-4f  / (static_cast<float>(array_int_var[varIdx]->min()) + 1.0f);
+                            float confidence = 1.0f - eom01;
+                            scores.emplace_back( mean + size_bonus +  min_bonus);
                         }
                     }
 
@@ -195,6 +199,10 @@ std::function<Branches(void)> FznSearchHelper::getMLSearchStrategy(Fzn::Model co
                     // ML
                     auto pa = ML::getPartialAssignment(array_int_var);
                     auto [vals, scores] = infer.scoreAllValuesForVar(pa, varIdx, array_int_var[varIdx]);
+
+                    // valOrd with small randomness:
+                    //std::uniform_real_distribution<float> val_noise(-1e-3f, 1e-3f);
+                    //for (auto& s : scores) s += val_noise(getValRng());
 
                     assert(valRank == ML::RankType::BEST or valRank == ML::RankType::WORST);
                     ML::sortByKey(scores,vals, valRank == ML::RankType::BEST ? bestCmp : worstCmp);

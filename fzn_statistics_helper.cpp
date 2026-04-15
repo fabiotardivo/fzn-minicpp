@@ -26,4 +26,5 @@ void FznStatisticsHelper::printStatistics(SearchStatistics const & stats,
        << "%%%mzn-stat: failures=" << stats.getFailures()  - stats.getTighteningFail() << std::endl
        << "%%%mzn-stat: peakDepth=" << search.getPeakDepth() << std::endl
        << "%%%mzn-stat-end" << std::endl;
+    os << std::flush;
 }
